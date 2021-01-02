@@ -1,0 +1,13 @@
+var i = 0
+// this is a comment
+var k = "hello"
+/* 
+this
+is
+a
+multi
+line
+comment
+*/
+// this is another comment
+var j = 10
