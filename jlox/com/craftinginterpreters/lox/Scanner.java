@@ -81,12 +81,7 @@ class Scanner {
           while (peek() != '\n' && !isAtEnd()) advance();
         } else if (match('*')) {
           // Multi line comment
-          while (!(peek() == '*' && peekNext() == '/') && !isAtEnd()) {
-            if (peek() == '\n') line++;
-            advance();
-          }
-          advance();
-          advance();
+          comment();
         } else {
           addToken(SLASH);
         }
@@ -114,6 +109,16 @@ class Scanner {
         }
         break;
     }
+  }
+
+  private void comment() {
+    while (!(peek() == '*' && peekNext() == '/') && !isAtEnd()) {
+      if (match('/') && peek() == '*') comment();
+      if (peek() == '\n') line++;
+      advance();
+    }
+    advance();
+    advance();
   }
 
   private void identifier() {

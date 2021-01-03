@@ -11,3 +11,5 @@ comment
 */
 // this is another comment
 var j = 10
+
+/* nested /* comment */ */
