@@ -4,6 +4,21 @@ import java.util.List;
 
 import static com.craftinginterpreters.lox.TokenType.*;
 
+/**
+ * Grammar:
+ *   expression     → expression "," expression ;
+ *                  | ternary ;
+ *                  | equality ;
+ *   ternary        → equality "?" term ":" term ;
+ *   equality       → comparison ( ( "!=" | "==" ) comparison )* ;
+ *   comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
+ *   term           → factor ( ( "-" | "+" ) factor )* ;
+ *   factor         → unary ( ( "/" | "*" ) unary )* ;
+ *   unary          → ( "!" | "-" ) unary
+ *                  | primary ;
+ *   primary        → NUMBER | STRING | "true" | "false" | "nil"
+ *                  | "(" expression ")" ;
+ */
 class Parser {
   private static class ParseError extends RuntimeException {}
 
@@ -22,13 +37,32 @@ class Parser {
     }
   }
 
+  /**
+   * expression → expression "," expression ;
+ *              | ternary ;
+ *              | equality ;
+   */
   private Expr expression() {
-    return equality();
+    Expr expr = equality();
+
+    // C comma operator
+    if (match(COMMA)) {
+      expr = expression();
+    }
+    else if (match(INTERROGATION)) {
+      expr = ternary();
+      return expr;
+    }
+
+    return expr;
   }
 
+  /**
+   * equality → comparison ( ( "!=" | "==" ) comparison )* ;
+   */
   private Expr equality() {
     Expr expr = comparison();
-
+    
     while (match(BANG_EQUAL, EQUAL_EQUAL)) {
       Token operator = previous();
       Expr right = comparison();
@@ -36,6 +70,99 @@ class Parser {
     }
 
     return expr;
+  }
+
+  /**
+   * ternary → equality "?" term ":" term ;
+   */
+  private Expr ternary() {
+    Token operator = previous();
+    Expr if_true = term();
+    consume(COLON, "Expect ':' after expression.");
+    Expr if_false = term();
+    
+    return new Expr.Binary(if_true, operator, if_false);
+  }
+
+  /**
+   * comparison → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
+   */
+  private Expr comparison() {
+    Expr expr = term();
+
+    while (match(GREATER, GREATER_EQUAL, LESS, LESS_EQUAL)) {
+      Token operator = previous();
+      Expr right = term();
+      expr = new Expr.Binary(expr, operator, right);
+    }
+
+    return expr;
+  }
+
+  /**
+   * term → factor ( ( "-" | "+" ) factor )* ;
+   */
+  private Expr term() {
+    Expr expr = factor();
+
+    while (match(MINUS, PLUS)) {
+      Token operator = previous();
+      Expr right = factor();
+      expr = new Expr.Binary(expr, operator, right);
+    }
+
+    return expr;
+  }
+
+  /**
+   * factor → unary ( ( "/" | "*" ) unary )* ;
+   */
+  private Expr factor() {
+    Expr expr = unary();
+
+    while (match(SLASH, STAR)) {
+      Token operator = previous();
+      Expr right = unary();
+      expr = new Expr.Binary(expr, operator, right);
+    }
+
+    return expr;
+  }
+
+  /**
+   * unary → ( "!" | "-" ) unary
+   *       | primary ;
+   */
+  private Expr unary() {
+    if (match(BANG, MINUS)) {
+      Token operator = previous();
+      Expr right = unary();
+      return new Expr.Unary(operator, right);
+    }
+
+    return primary();
+  }
+
+  /**
+   * primary → NUMBER | STRING | "true" | "false" | "nil"
+   *         | "(" expression ")" ;
+   */
+  private Expr primary() {
+    if (match(FALSE)) return new Expr.Literal(false);
+    if (match(TRUE)) return new Expr.Literal(true);
+    if (match(NIL)) return new Expr.Literal(null);
+
+    if (match(NUMBER, STRING)) {
+      return new Expr.Literal(previous().literal);
+    }
+
+    if (match(LEFT_PAREN)) {
+      Expr expr = expression();
+      consume(RIGHT_PAREN, "Expect ')' after expression.");
+      return new Expr.Grouping(expr);
+    }
+    
+    throw error(peek(), "Expect expression.");
   }
 
   private boolean match(TokenType... types) {
@@ -104,67 +231,4 @@ class Parser {
     }
   }
 
-  private Expr comparison() {
-    Expr expr = term();
-
-    while (match(GREATER, GREATER_EQUAL, LESS, LESS_EQUAL)) {
-      Token operator = previous();
-      Expr right = term();
-      expr = new Expr.Binary(expr, operator, right);
-    }
-
-    return expr;
-  }
-
-  private Expr term() {
-    Expr expr = factor();
-
-    while (match(MINUS, PLUS)) {
-      Token operator = previous();
-      Expr right = factor();
-      expr = new Expr.Binary(expr, operator, right);
-    }
-
-    return expr;
-  }
-
-  private Expr factor() {
-    Expr expr = unary();
-
-    while (match(SLASH, STAR)) {
-      Token operator = previous();
-      Expr right = unary();
-      expr = new Expr.Binary(expr, operator, right);
-    }
-
-    return expr;
-  }
-
-  private Expr unary() {
-    if (match(BANG, MINUS)) {
-      Token operator = previous();
-      Expr right = unary();
-      return new Expr.Unary(operator, right);
-    }
-
-    return primary();
-  }
-
-  private Expr primary() {
-    if (match(FALSE)) return new Expr.Literal(false);
-    if (match(TRUE)) return new Expr.Literal(true);
-    if (match(NIL)) return new Expr.Literal(null);
-
-    if (match(NUMBER, STRING)) {
-      return new Expr.Literal(previous().literal);
-    }
-
-    if (match(LEFT_PAREN)) {
-      Expr expr = expression();
-      consume(RIGHT_PAREN, "Expect ')' after expression.");
-      return new Expr.Grouping(expr);
-    }
-    
-    throw error(peek(), "Expect expression.");
-  }
 }
