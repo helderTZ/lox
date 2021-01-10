@@ -4,15 +4,17 @@ import java.util.List;
 class Interpreter implements Expr.Visitor<Object>,
                              Stmt.Visitor<Void> {
 
-  // before adding statements
-  void interpret(Expr expression) { 
-    try {
-      Object value = evaluate(expression);
-      System.out.println(stringify(value));
-    } catch (RuntimeError error) {
-      Lox.runtimeError(error);
-    }
-  }
+  private Environment environment = new Environment();
+
+  // // before adding statements
+  // void interpret(Expr expression) { 
+  //   try {
+  //     Object value = evaluate(expression);
+  //     System.out.println(stringify(value));
+  //   } catch (RuntimeError error) {
+  //     Lox.runtimeError(error);
+  //   }
+  // }
 
   void interpret(List<Stmt> statements) {
     try {
@@ -34,6 +36,17 @@ class Interpreter implements Expr.Visitor<Object>,
   public Void visitPrintStmt(Stmt.Print stmt) {
     Object value = evaluate(stmt.expression);
     System.out.println(stringify(value));
+    return null;
+  }
+
+  @Override
+  public Void visitVarStmt(Stmt.Var stmt) {
+    Object value = null;
+    if (stmt.initializer != null) {
+      value = evaluate(stmt.initializer);
+    }
+
+    environment.define(stmt.name.lexeme, value);
     return null;
   }
 
@@ -61,6 +74,11 @@ class Interpreter implements Expr.Visitor<Object>,
 
     // Unreachable.
     return null;
+  }
+
+  @Override
+  public Object visitVariableExpr(Expr.Variable expr) {
+    return environment.get(expr.name);
   }
 
   private boolean isTruthy(Object object) {

@@ -7,23 +7,41 @@ import static com.craftinginterpreters.lox.TokenType.*;
 
 /**
  * Grammar:
- *   program        → statement* EOF ;
+ *   program        → declaration* EOF ;
+ * 
+ *   declaration    → varDecl
+ *                  | statement ;
+ * 
+ *   varDecl        → "var" IDENTIFIER ( "=" expression )? ";" ;
+ * 
  *   statement      → exprStmt
  *                  | printStmt ;
+ * 
  *   exprStmt       → expression ";" ;
+ * 
  *   printStmt      → "print" expression ";" ;
- *   expression     → expression "," expression ;
- *                  | ternary ;
+ * 
+ *   expression     → expression "," expression
+ *                  | ternary
  *                  | equality ;
+ * 
  *   ternary        → equality "?" term ":" term ;
+ * 
  *   equality       → comparison ( ( "!=" | "==" ) comparison )* ;
+ * 
  *   comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
+ * 
  *   term           → factor ( ( "-" | "+" ) factor )* ;
+ * 
  *   factor         → unary ( ( "/" | "*" ) unary )* ;
+ * 
  *   unary          → ( "!" | "-" ) unary
  *                  | primary ;
- *   primary        → NUMBER | STRING | "true" | "false" | "nil"
- *                  | "(" expression ")" ;
+ * 
+ *   primary        → "true" | "false" | "nil"
+ *                  | NUMBER | STRING
+ *                  | "(" expression ")"
+ *                  | IDENTIFIER ;
  */
 class Parser {
   private static class ParseError extends RuntimeException {}
@@ -47,7 +65,7 @@ class Parser {
   List<Stmt> parse() {
     List<Stmt> statements = new ArrayList<>();
     while (!isAtEnd()) {
-      statements.add(statement());
+      statements.add(declaration());
     }
 
     return statements; 
@@ -76,6 +94,21 @@ class Parser {
   }
 
   /**
+   * declaration → varDecl
+   *             | statement ;
+   */
+  private Stmt declaration() {
+    try {
+      if (match(VAR)) return varDeclaration();
+
+      return statement();
+    } catch (ParseError error) {
+      synchronize();
+      return null;
+    }
+  }
+
+  /**
    * statement → exprStmt
    *           | printStmt ;
    */
@@ -92,6 +125,21 @@ class Parser {
     Expr value = expression();
     consume(SEMICOLON, "Expect ';' after value.");
     return new Stmt.Print(value);
+  }
+
+  /**
+   * varDecl → "var" IDENTIFIER ( "=" expression )? ";" ;
+   */
+  private Stmt varDeclaration() {
+    Token name = consume(IDENTIFIER, "Expect variable name.");
+
+    Expr initializer = null;
+    if (match(EQUAL)) {
+      initializer = expression();
+    }
+
+    consume(SEMICOLON, "Expect ';' after variable declaration.");
+    return new Stmt.Var(name, initializer);
   }
 
   /**
@@ -205,6 +253,10 @@ class Parser {
       Expr expr = expression();
       consume(RIGHT_PAREN, "Expect ')' after expression.");
       return new Expr.Grouping(expr);
+    }
+
+    if (match(IDENTIFIER)) {
+      return new Expr.Variable(previous());
     }
     
     throw error(peek(), "Expect expression.");
