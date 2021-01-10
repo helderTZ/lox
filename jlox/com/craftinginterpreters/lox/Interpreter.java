@@ -1,7 +1,10 @@
 package com.craftinginterpreters.lox;
 
-class Interpreter implements Expr.Visitor<Object> {
+import java.util.List;
+class Interpreter implements Expr.Visitor<Object>,
+                             Stmt.Visitor<Void> {
 
+  // before adding statements
   void interpret(Expr expression) { 
     try {
       Object value = evaluate(expression);
@@ -9,6 +12,29 @@ class Interpreter implements Expr.Visitor<Object> {
     } catch (RuntimeError error) {
       Lox.runtimeError(error);
     }
+  }
+
+  void interpret(List<Stmt> statements) {
+    try {
+      for (Stmt statement : statements) {
+        execute(statement);
+      }
+    } catch (RuntimeError error) {
+      Lox.runtimeError(error);
+    }
+  }
+
+  @Override
+  public Void visitExpressionStmt(Stmt.Expression stmt) {
+    evaluate(stmt.expression);
+    return null;
+  }
+
+  @Override
+  public Void visitPrintStmt(Stmt.Print stmt) {
+    Object value = evaluate(stmt.expression);
+    System.out.println(stringify(value));
+    return null;
   }
 
   @Override
@@ -64,9 +90,12 @@ class Interpreter implements Expr.Visitor<Object> {
     return object.toString();
   }
 
-
   private Object evaluate(Expr expr) {
     return expr.accept(this);
+  }
+
+  private void execute(Stmt stmt) {
+    stmt.accept(this);
   }
 
   @Override
@@ -116,6 +145,21 @@ class Interpreter implements Expr.Visitor<Object> {
         return (double)left * (double)right;
       case BANG_EQUAL: return !isEqual(left, right);
       case EQUAL_EQUAL: return isEqual(left, right);
+    }
+
+    // Unreachable.
+    return null;
+  }
+
+  @Override
+  public Object visitTernaryExpr(Expr.Ternary expr) {
+    Object test = evaluate(expr.test);
+
+    if (test instanceof Boolean) {
+      if ((boolean)test)
+        return evaluate(expr.if_true);
+      else
+        return evaluate(expr.if_false);
     }
 
     // Unreachable.

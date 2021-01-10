@@ -1,15 +1,4 @@
-var i = 0
-// this is a comment
-var k = "hello"
-/* 
-this
-is
-a
-multi
-line
-comment
-*/
-// this is another comment
-var j = 10
-
-/* nested /* comment */ */
+print "one";
+print true;
+print 2 + 1;
+print (3==4 ? "yes" : "no");
