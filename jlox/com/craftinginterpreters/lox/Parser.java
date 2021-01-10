@@ -24,13 +24,15 @@ import static com.craftinginterpreters.lox.TokenType.*;
  * 
  *   printStmt      → "print" expression ";" ;
  * 
- *   expression     → expression "," expression
- *                  | ternary
+ *   expression     → ternary
+ *                  | comma
  *                  | assignment ;
  * 
  *   assignment     → IDENTIFIER "=" assignment
  *                  | equality ;
  * 
+ *   comma          → expression "," expression ;
+ *
  *   ternary        → equality "?" term ":" term ;
  * 
  *   equality       → comparison ( ( "!=" | "==" ) comparison )* ;
@@ -78,7 +80,7 @@ class Parser {
   }
 
   /**
-   * expression → expression "," expression ;
+   * expression → comma ;
    *            | ternary ;
    *            | assignment ;
    */
@@ -87,9 +89,8 @@ class Parser {
 
     // C comma operator
     if (match(COMMA)) {
-      expr = expression();
+      expr = comma(expr);
     }
-
     // C ternary operator ?:
     else if (match(INTERROGATION)) {
       expr = ternary(expr);
@@ -195,18 +196,13 @@ class Parser {
   }
 
   /**
-   * equality → comparison ( ( "!=" | "==" ) comparison )* ;
+   * comma → expression "," expression ;
    */
-  private Expr equality() {
-    Expr expr = comparison();
-    
-    while (match(BANG_EQUAL, EQUAL_EQUAL)) {
-      Token operator = previous();
-      Expr right = comparison();
-      expr = new Expr.Binary(expr, operator, right);
-    }
+  private Expr comma(Expr left) {
+    Token operator = previous();
+    Expr right = expression();
 
-    return expr;
+    return new Expr.Binary(left, operator, right);
   }
 
   /**
@@ -216,8 +212,23 @@ class Parser {
     Expr if_true = term();
     consume(COLON, "Expect ':' after expression.");
     Expr if_false = term();
-    
+
     return new Expr.Ternary(test, if_true, if_false);
+  }
+
+  /**
+   * equality → comparison ( ( "!=" | "==" ) comparison )* ;
+   */
+  private Expr equality() {
+    Expr expr = comparison();
+
+    while (match(BANG_EQUAL, EQUAL_EQUAL)) {
+      Token operator = previous();
+      Expr right = comparison();
+      expr = new Expr.Binary(expr, operator, right);
+    }
+
+    return expr;
   }
 
   /**
