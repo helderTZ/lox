@@ -49,7 +49,12 @@ import static com.craftinginterpreters.lox.TokenType.*;
  *   primary        → "true" | "false" | "nil"
  *                  | NUMBER | STRING
  *                  | "(" expression ")"
- *                  | IDENTIFIER ;
+ *                  | IDENTIFIER
+ *                  // Error productions...
+ *                  | ( "!=" | "==" ) equality
+ *                  | ( ">" | ">=" | "<" | "<=" ) comparison
+ *                  | ( "+" ) term
+ *                  | ( "/" | "*" ) factor ;
  */
 class Parser {
   private static class ParseError extends RuntimeException {}
@@ -493,6 +498,31 @@ class Parser {
     if (match(IDENTIFIER)) {
       return new Expr.Variable(previous());
     }
+
+    // Error productions.
+  if (match(BANG_EQUAL, EQUAL_EQUAL)) {
+    error(previous(), "Missing left-hand operand.");
+    equality();
+    return null;
+  }
+
+  if (match(GREATER, GREATER_EQUAL, LESS, LESS_EQUAL)) {
+    error(previous(), "Missing left-hand operand.");
+    comparison();
+    return null;
+  }
+
+  if (match(PLUS)) {
+    error(previous(), "Missing left-hand operand.");
+    term();
+    return null;
+  }
+
+  if (match(SLASH, STAR)) {
+    error(previous(), "Missing left-hand operand.");
+    factor();
+    return null;
+  }
     
     throw error(peek(), "Expect expression.");
   }
