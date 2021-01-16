@@ -22,7 +22,11 @@ class LoxFunction implements LoxCallable {
           arguments.get(i));
     }
 
-    interpreter.executeBlock(declaration.body, environment);
+    try {
+      interpreter.executeBlock(declaration.body, environment);
+    } catch (Return returnValue) {
+      return returnValue.value;
+    }
     return null;
   }
 
