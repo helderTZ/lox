@@ -9,17 +9,12 @@ import static com.craftinginterpreters.lox.TokenType.*;
 /**
  * Grammar:
  *   program        → declaration* EOF ;
- * 
  *   declaration    → funDecl
  *                  | varDecl
  *                  | statement ;
- * 
  *   funDecl        → "fun" function ;
- * 
  *   function       → IDENTIFIER "(" parameters? ")" block ;
- * 
  *   varDecl        → "var" IDENTIFIER ( "=" expression )? ";" ;
- * 
  *   statement      → exprStmt
  *                  | forStmt
  *                  | ifStmt
@@ -27,51 +22,30 @@ import static com.craftinginterpreters.lox.TokenType.*;
  *                  | returnStmt
  *                  | whileStmt
  *                  | block ;
- * 
  *   returnStmt     → "return" expression? ";" ;
- * 
  *   forStmt        → "for" "(" ( varDecl | exprStmt | ";" ) expression? ";" expression? ")" statement ;
- * 
  *   whileStmt      → "while" "(" expression ")" statement ;
- * 
  *   ifStmt         → "if" "(" expression ")" statement ( "else" statement )? ;
- * 
  *   block          → "{" declaration* "}" ;
- * 
  *   exprStmt       → expression ";" ;
- * 
  *   printStmt      → "print" expression ";" ;
- * 
  *   expression     → ternary
  *                  | comma
  *                  | assignment ;
- * 
  *   assignment     → IDENTIFIER "=" assignment
  *                  | logic_or ;
- * 
  *   logic_or       → logic_and ( "or" logic_and )* ;
- * 
  *   logic_and      → equality ( "and" equality )* ;
- * 
- *   comma          → expression "," expression ;
- *
+ *   comma          → equality ( "," equality )* ;
  *   ternary        → equality "?" term ":" term ;
- * 
  *   equality       → comparison ( ( "!=" | "==" ) comparison )* ;
- * 
  *   comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
- * 
  *   term           → factor ( ( "-" | "+" ) factor )* ;
- * 
  *   factor         → unary ( ( "/" | "*" ) unary )* ;
- * 
  *   unary          → ( "!" | "-" ) unary
  *                  | call ;
- * 
  *   call           → primary ( "(" arguments? ")" )* ;
- * 
  *   arguments      → expression ( "," expression )* ;
- * 
  *   primary        → "true" | "false" | "nil"
  *                  | NUMBER | STRING
  *                  | "(" expression ")"
@@ -115,7 +89,9 @@ class Parser {
 
     // C comma operator
     if (match(COMMA)) {
-      expr = comma(expr);
+      Token operator = previous();
+      Expr right = equality();
+      expr = new Expr.Binary(expr, operator, right);
     }
     // C ternary operator ?:
     else if (match(INTERROGATION)) {
@@ -378,16 +354,6 @@ class Parser {
   }
 
   /**
-   * comma → expression "," expression ;
-   */
-  private Expr comma(Expr left) {
-    Token operator = previous();
-    Expr right = expression();
-
-    return new Expr.Binary(left, operator, right);
-  }
-
-  /**
    * ternary → equality "?" term ":" term ;
    */
   private Expr ternary(Expr test) {
@@ -496,7 +462,7 @@ class Parser {
         if (arguments.size() >= 255) {
           error(peek(), "Can't have more than 255 arguments.");
         }
-        arguments.add(expression());
+        arguments.add(equality());
       } while (match(COMMA));
     }
 
