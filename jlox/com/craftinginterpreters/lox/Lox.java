@@ -33,16 +33,34 @@ public class Lox {
     if (hadRuntimeError) System.exit(70);
   }
 
-    private static void runPrompt() throws IOException {
+  private static void runPrompt() throws IOException {
     InputStreamReader input = new InputStreamReader(System.in);
     BufferedReader reader = new BufferedReader(input);
 
-    for (;;) { 
-      System.out.print("> ");
-      String line = reader.readLine();
-      if (line == null) break;
-      run(line);
+    for (;;) {
       hadError = false;
+  
+      System.out.print("> ");
+      String lines = reader.readLine();
+      if (lines == null)
+        break;
+      Scanner scanner = new Scanner(lines);
+      List<Token> tokens = scanner.scanTokens();
+  
+      Parser parser = new Parser(tokens);
+      Object syntax = parser.parseRepl();
+  
+      // Ignore it if there was a syntax error.
+      if (hadError) continue;
+  
+      if (syntax instanceof List) {
+        interpreter.interpret((List<Stmt>)syntax);
+      } else if (syntax instanceof Expr) {
+        String result = interpreter.interpret((Expr)syntax);
+        if (result != null) {
+          System.out.println("= " + result);
+        }
+      }
     }
   }
 
@@ -50,13 +68,11 @@ public class Lox {
     Scanner scanner = new Scanner(source);
     List<Token> tokens = scanner.scanTokens();
     Parser parser = new Parser(tokens);
-    // Expr expression = parser.parse(); // before adding statements
     List<Stmt> statements = parser.parse();
 
     // Stop if there was a syntax error.
     if (hadError) return;
 
-    // System.out.println(new AstPrinter().print(expression)); /* DEBUG */
     interpreter.interpret(statements);
   }
 
