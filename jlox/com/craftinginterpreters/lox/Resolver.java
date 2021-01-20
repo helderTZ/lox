@@ -25,12 +25,12 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     }
   }
 
-  private void resolve(Stmt stmt) {
-    stmt.accept(this);
+  void resolve(Expr expr) {
+    expr.accept(this);
   }
 
-  private void resolve(Expr expr) {
-    expr.accept(this);
+  private void resolve(Stmt stmt) {
+    stmt.accept(this);
   }
 
   private void beginScope() {
