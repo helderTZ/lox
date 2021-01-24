@@ -21,12 +21,14 @@ import static com.craftinginterpreters.lox.TokenType.*;
  *                  | printStmt
  *                  | returnStmt
  *                  | whileStmt
- *                  | block ;
+ *                  | block
+ *                  | breakStmt ;
  *   returnStmt     → "return" expression? ";" ;
  *   forStmt        → "for" "(" ( varDecl | exprStmt | ";" ) expression? ";" expression? ")" statement ;
  *   whileStmt      → "while" "(" expression ")" statement ;
  *   ifStmt         → "if" "(" expression ")" statement ( "else" statement )? ;
  *   block          → "{" declaration* "}" ;
+ *   breakStmt          → "break" ";" ;
  *   exprStmt       → expression ";" ;
  *   printStmt      → "print" expression ";" ;
  *   expression     → ternary
@@ -63,6 +65,7 @@ class Parser {
   private int current = 0;
   private boolean allowExpression;
   private boolean foundExpression = false;
+  private int loopDepth = 0;
 
   Parser(List<Token> tokens) {
     this.tokens = tokens;
@@ -141,7 +144,8 @@ class Parser {
    *           | printStmt
    *           | returnStmt
    *           | whileStmt
-   *           | block ;
+   *           | block
+   *           | breakStmt ;
    */
   private Stmt statement() {
     if (match(FOR)) return forStatement();
@@ -150,6 +154,7 @@ class Parser {
     if (match(RETURN)) return returnStatement();
     if (match(WHILE)) return whileStatement();
     if (match(LEFT_BRACE)) return new Stmt.Block(block());
+    if (match(BREAK)) return breakStatement();
 
     return expressionStatement();
   }
@@ -183,23 +188,29 @@ class Parser {
     }
     consume(RIGHT_PAREN, "Expect ')' after for clauses.");
     
-    Stmt body = statement();
-
-    if (increment != null) {
-      body = new Stmt.Block(
+    try {
+      loopDepth++;
+      Stmt body = statement();
+    
+      if (increment != null) {
+        body = new Stmt.Block(
           Arrays.asList(
-              body,
-              new Stmt.Expression(increment)));
+            body,
+            new Stmt.Expression(increment)));
+      }
+    
+      if (condition == null) condition = new Expr.Literal(true);
+      body = new Stmt.While(condition, body);
+    
+      if (initializer != null) {
+        body = new Stmt.Block(Arrays.asList(initializer, body));
+      }
+    
+      return body;
+    } finally {
+      loopDepth--;
     }
 
-    if (condition == null) condition = new Expr.Literal(true);
-    body = new Stmt.While(condition, body);
-
-    if (initializer != null) {
-      body = new Stmt.Block(Arrays.asList(initializer, body));
-    }
-
-    return body;
   }
 
   /**
@@ -264,9 +275,14 @@ class Parser {
     consume(LEFT_PAREN, "Expect '(' after 'while'.");
     Expr condition = expression();
     consume(RIGHT_PAREN, "Expect ')' after condition.");
-    Stmt body = statement();
 
-    return new Stmt.While(condition, body);
+    try {
+      loopDepth++;
+      Stmt body = statement();
+      return new Stmt.While(condition, body);
+    } finally {
+      loopDepth--;
+    }
   }
 
   /**
@@ -319,6 +335,17 @@ class Parser {
 
     consume(RIGHT_BRACE, "Expect '}' after block.");
     return statements;
+  }
+
+  /**
+   * breakStmt → "break" ";" ;
+   */
+  private Stmt breakStatement() {
+    if (loopDepth == 0) {
+      error(previous(), "Must be inside a loop to use 'break'.");
+    }
+    consume(SEMICOLON, "Expect ';' after 'break'.");
+    return new Stmt.Break();
   }
 
   /**
