@@ -9,9 +9,11 @@ import static com.craftinginterpreters.lox.TokenType.*;
 /**
  * Grammar:
  *   program        → declaration* EOF ;
- *   declaration    → funDecl
+ *   declaration    → classDecl
+ *                  | funDecl
  *                  | varDecl
  *                  | statement ;
+ *   classDecl      → "class" IDENTIFIER "{" function* "}" ;
  *   funDecl        → "fun" function ;
  *   function       → IDENTIFIER "(" parameters? ")" block ;
  *   varDecl        → "var" IDENTIFIER ( "=" expression )? ";" ;
@@ -34,7 +36,7 @@ import static com.craftinginterpreters.lox.TokenType.*;
  *   expression     → ternary
  *                  | comma
  *                  | assignment ;
- *   assignment     → IDENTIFIER "=" assignment
+ *   assignment     → ( call "." )? IDENTIFIER "=" assignment
  *                  | logic_or ;
  *   logic_or       → logic_and ( "or" logic_and )* ;
  *   logic_and      → equality ( "and" equality )* ;
@@ -46,7 +48,7 @@ import static com.craftinginterpreters.lox.TokenType.*;
  *   factor         → unary ( ( "/" | "*" ) unary )* ;
  *   unary          → ( "!" | "-" ) unary
  *                  | call ;
- *   call           → primary ( "(" arguments? ")" )* ;
+ *   call           → primary ( "(" arguments? ")" | "." IDENTIFIER )* ;
  *   arguments      → expression ( "," expression )* ;
  *   primary        → "true" | "false" | "nil"
  *                  | NUMBER | STRING
@@ -121,12 +123,14 @@ class Parser {
   }
 
   /**
-   * declaration → funDecl
+   * declaration → classDecl
+   *             | funDecl
    *             | varDecl
    *             | statement ;
    */
   private Stmt declaration() {
     try {
+      if (match(CLASS)) return classDeclaration();
       if (match(FUN)) return function("function");
       if (match(VAR)) return varDeclaration();
 
@@ -135,6 +139,23 @@ class Parser {
       synchronize();
       return null;
     }
+  }
+
+  /**
+   * classDecl → "class" IDENTIFIER "{" function* "}" ;
+   */
+  private Stmt classDeclaration() {
+    Token name = consume(IDENTIFIER, "Expect class name.");
+    consume(LEFT_BRACE, "Expect '{' before class body.");
+
+    List<Stmt.Function> methods = new ArrayList<>();
+    while (!check(RIGHT_BRACE) && !isAtEnd()) {
+      methods.add(function("method"));
+    }
+
+    consume(RIGHT_BRACE, "Expect '}' after class body.");
+
+    return new Stmt.Class(name, methods);
   }
 
   /**
@@ -349,7 +370,7 @@ class Parser {
   }
 
   /**
-   * assignment → IDENTIFIER "=" assignment
+   * assignment → ( call "." )? IDENTIFIER "=" assignment
    *            | logic_or ;
    */
   private Expr assignment() {
@@ -362,6 +383,9 @@ class Parser {
       if (expr instanceof Expr.Variable) {
         Token name = ((Expr.Variable)expr).name;
         return new Expr.Assign(name, value);
+      } else if (expr instanceof Expr.Get) {
+        Expr.Get get = (Expr.Get)expr;
+        return new Expr.Set(get.object, get.name, value);
       }
 
       error(equals, "Invalid assignment target."); 
@@ -486,7 +510,7 @@ class Parser {
   }
 
   /**
-   * call → primary ( "(" arguments? ")" )* ;
+   * call → primary ( "(" arguments? ")" | "." IDENTIFIER )* ;
    */
   private Expr call() {
     Expr expr = primary();
@@ -494,6 +518,10 @@ class Parser {
     while (true) { 
       if (match(LEFT_PAREN)) {
         expr = finishCall(expr);
+      } else if (match(DOT)) {
+        Token name = consume(IDENTIFIER,
+            "Expect property name after '.'.");
+        expr = new Expr.Get(expr, name);
       } else {
         break;
       }
@@ -536,6 +564,8 @@ class Parser {
       consume(RIGHT_PAREN, "Expect ')' after expression.");
       return new Expr.Grouping(expr);
     }
+
+    if (match(THIS)) return new Expr.This(previous());
 
     if (match(IDENTIFIER)) {
       return new Expr.Variable(previous());
