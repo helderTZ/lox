@@ -13,7 +13,7 @@ import static com.craftinginterpreters.lox.TokenType.*;
  *                  | funDecl
  *                  | varDecl
  *                  | statement ;
- *   classDecl      → "class" IDENTIFIER "{" function* "}" ;
+ *   classDecl      → "class" IDENTIFIER ( "<" IDENTIFIER )? "{" function* "}" ;
  *   funDecl        → "fun" function ;
  *   function       → IDENTIFIER "(" parameters? ")" block ;
  *   varDecl        → "var" IDENTIFIER ( "=" expression )? ";" ;
@@ -52,8 +52,9 @@ import static com.craftinginterpreters.lox.TokenType.*;
  *   arguments      → expression ( "," expression )* ;
  *   primary        → "true" | "false" | "nil"
  *                  | NUMBER | STRING
- *                  | "(" expression ")"
  *                  | IDENTIFIER
+ *                  | "(" expression ")"
+ *                  | "super" "." IDENTIFIER
  *                  // Error productions...
  *                  | ( "!=" | "==" ) equality
  *                  | ( ">" | ">=" | "<" | "<=" ) comparison
@@ -142,10 +143,17 @@ class Parser {
   }
 
   /**
-   * classDecl → "class" IDENTIFIER "{" function* "}" ;
+   * classDecl → "class" IDENTIFIER ( "<" IDENTIFIER )? "{" function* "}" ;
    */
   private Stmt classDeclaration() {
     Token name = consume(IDENTIFIER, "Expect class name.");
+
+    Expr.Variable superclass = null;
+    if (match(LESS)) {
+      consume(IDENTIFIER, "Expect superclass name.");
+      superclass = new Expr.Variable(previous());
+    }
+
     consume(LEFT_BRACE, "Expect '{' before class body.");
 
     List<Stmt.Function> methods = new ArrayList<>();
@@ -155,7 +163,7 @@ class Parser {
 
     consume(RIGHT_BRACE, "Expect '}' after class body.");
 
-    return new Stmt.Class(name, methods);
+    return new Stmt.Class(name, superclass, methods);
   }
 
   /**
@@ -547,8 +555,16 @@ class Parser {
   }
 
   /**
-   * primary → NUMBER | STRING | "true" | "false" | "nil"
-   *         | "(" expression ")" ;
+   * primary → "true" | "false" | "nil"
+   *         | NUMBER | STRING
+   *         | IDENTIFIER
+   *         | "(" expression ")"
+   *         | "super" "." IDENTIFIER
+   *         // Error productions...
+   *         | ( "!=" | "==" ) equality
+   *         | ( ">" | ">=" | "<" | "<=" ) comparison
+   *         | ( "+" ) term
+   *         | ( "/" | "*" ) factor ;
    */
   private Expr primary() {
     if (match(FALSE)) return new Expr.Literal(false);
@@ -565,37 +581,47 @@ class Parser {
       return new Expr.Grouping(expr);
     }
 
-    if (match(THIS)) return new Expr.This(previous());
+    if (match(SUPER)) {
+      Token keyword = previous();
+      consume(DOT, "Expect '.' after 'super'.");
+      Token method = consume(IDENTIFIER,
+          "Expect superclass method name.");
+      return new Expr.Super(keyword, method);
+    }
+
+    if (match(THIS)) {
+      return new Expr.This(previous());
+    }
 
     if (match(IDENTIFIER)) {
       return new Expr.Variable(previous());
     }
 
     // Error productions.
-  if (match(BANG_EQUAL, EQUAL_EQUAL)) {
-    error(previous(), "Missing left-hand operand.");
-    equality();
-    return null;
-  }
+    if (match(BANG_EQUAL, EQUAL_EQUAL)) {
+      error(previous(), "Missing left-hand operand.");
+      equality();
+      return null;
+    }
 
-  if (match(GREATER, GREATER_EQUAL, LESS, LESS_EQUAL)) {
-    error(previous(), "Missing left-hand operand.");
-    comparison();
-    return null;
-  }
+    if (match(GREATER, GREATER_EQUAL, LESS, LESS_EQUAL)) {
+      error(previous(), "Missing left-hand operand.");
+      comparison();
+      return null;
+    }
 
-  if (match(PLUS)) {
-    error(previous(), "Missing left-hand operand.");
-    term();
-    return null;
-  }
+    if (match(PLUS)) {
+      error(previous(), "Missing left-hand operand.");
+      term();
+      return null;
+    }
 
-  if (match(SLASH, STAR)) {
-    error(previous(), "Missing left-hand operand.");
-    factor();
-    return null;
-  }
-    
+    if (match(SLASH, STAR)) {
+      error(previous(), "Missing left-hand operand.");
+      factor();
+      return null;
+    }
+      
     throw error(peek(), "Expect expression.");
   }
 
