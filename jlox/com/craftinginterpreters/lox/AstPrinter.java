@@ -1,5 +1,7 @@
 package com.craftinginterpreters.lox;
 
+import java.util.ArrayList;
+
 class AstPrinter implements Expr.Visitor<String> {
   String print(Expr expr) {
     return expr.accept(this);
@@ -47,6 +49,37 @@ class AstPrinter implements Expr.Visitor<String> {
   public String visitLogicalExpr(Expr.Logical expr) {
     return parenthesize(expr.operator.lexeme,
                         expr.left, expr.right);
+  }
+
+  @Override
+  public String visitSetExpr(Expr.Set expr) {
+    return "(" + expr.object + "." + expr.name + " = " + expr.value + ")";
+  }
+
+  @Override
+  public String visitGetExpr(Expr.Get expr) {
+    return "(" + expr.object + "." + expr.name + ")";
+  }
+
+  @Override
+  public String visitThisExpr(Expr.This expr) {
+    return "(this)";
+  }
+
+  @Override
+  public String visitSuperExpr(Expr.Super expr) {
+    return "(super." + expr.method + ")";
+  }
+
+  @Override
+  public String visitCallExpr(Expr.Call expr) {
+    String str = "(" + expr.callee + "( ";
+    ArrayList<String> args = new ArrayList<String>();
+    for(Expr e : expr.arguments) {
+      args.add(new AstPrinter().print(e));
+    }
+    str = str + String.join(", ", args) + "))";
+    return str;
   }
 
   private String parenthesize(String name, Expr... exprs) {
