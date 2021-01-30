@@ -1,25 +1,29 @@
-<project>
+<project name="jlox" basedir="." default="build">
+  <property name="src.dir" value="com/craftinginterpreters/lox"/>
+  <property name="build.dir" value="build"/>
 
-    <target name="clean">
-        <delete dir="build"/>
-    </target>
+  <target name="clean">
+    <delete dir="${build.dir}"/>
+  </target>
 
-    <target name="compile">
-        <mkdir dir="build/classes"/>
-        <javac srcdir="com/craftinginterpreters/lox" destdir="build/classes"/>
-    </target>
+  <target name="compile">
+    <mkdir dir="${build.dir}/classes"/>
+    <javac srcdir="${src.dir}" destdir="${build.dir}/classes">
+      <include name="**/*.java"/>
+    </javac>
+  </target>
 
-    <target name="jar">
-        <mkdir dir="build/jar"/>
-        <jar destfile="build/jar/Lox.jar" basedir="build/classes">
-            <manifest>
-                <attribute name="Main-Class" value="com.craftinginterpreters.lox.Lox"/>
-            </manifest>
-        </jar>
-    </target>
+  <target name="jar" depends="compile">
+    <mkdir dir="${build.dir}/jar"/>
+    <jar destfile="${build.dir}/jar/Lox.jar" basedir="${build.dir}/classes">
+      <manifest>
+        <attribute name="Main-Class" value="com.craftinginterpreters.lox.Lox"/>
+      </manifest>
+    </jar>
+  </target>
 
-    <target name="run">
-        <java jar="build/jar/Lox.jar" fork="true"/>
-    </target>
+  <target name="run">
+    <java jar="${build.dir}/jar/Lox.jar" fork="true"/>
+  </target>
 
 </project>
