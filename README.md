@@ -5,5 +5,6 @@ Closely following this book: http://craftinginterpreters.com/
 
 ## Build
 
-To build __jlox__, run `ant compile jar` inside `jlox/` folder and the executable jar file will be in `jlox/build/jar/Lox.jar`.
-To build __clox__, run `make` inside `clox/` folder and the executable file will be in `clox/clox`.
+To build:
+- __jlox__ : run `ant compile jar` inside `jlox/` folder and the executable jar file will be in `jlox/build/jar/Lox.jar`.
+- __clox__ : run `make` inside `clox/` folder and the executable file will be in `clox/clox`.
