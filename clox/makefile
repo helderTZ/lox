@@ -1,14 +1,15 @@
 CC=gcc
+CFLAGS=-W -Wall -Wextra -Wno-unused-parameter
 SOURCES=$(wildcard *.c)
 OBJECTS=$(patsubst %.c, %.o, $(SOURCES))
 
 all: clox
 
 clox: $(OBJECTS)
-	$(CC) -o $@ $(OBJECTS)
+	$(CC) $(CFLAGS) -o $@ $(OBJECTS)
 
 $(OBJECTS): %.o: %.c
-	$(CC) -c $< -o $@
+	$(CC) $(CFLAGS) -c $< -o $@
 
 .PHONY: clean
 
