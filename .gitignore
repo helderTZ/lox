@@ -1,2 +1,4 @@
 .vscode
 jlox/build
+clox/*.o
+clox/clox
