@@ -3,6 +3,10 @@ CFLAGS=-W -Wall -Wextra -Wno-unused-parameter -Wno-sequence-point
 SOURCES=$(wildcard *.c)
 OBJECTS=$(patsubst %.c, %.o, $(SOURCES))
 
+ifneq ($(DEBUG),)
+CFLAGS += -g -O0
+endif
+
 all: clox
 
 clox: $(OBJECTS)
