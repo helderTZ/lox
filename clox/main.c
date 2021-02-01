@@ -3,6 +3,8 @@
 #include "debug.h"
 #include "vm.h"
 
+// #include "benchmark.h"
+
 int main(int argc, const char* argv[]) {
   initVM();
 
