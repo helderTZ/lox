@@ -245,6 +245,7 @@ static void expression() {
 
 bool compile(const char* source, Chunk* chunk) {
   initScanner(source);
+  compilingChunk = chunk;
 
   parser.hadError = false;
   parser.panicMode = false;
