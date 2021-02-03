@@ -1,4 +1,4 @@
-CC=gcc
+CC=clang
 CFLAGS=-W -Wall -Wextra -Wno-unused-parameter -Wno-sequence-point
 SOURCES=$(wildcard *.c)
 OBJECTS=$(patsubst %.c, %.o, $(SOURCES))
