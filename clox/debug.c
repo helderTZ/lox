@@ -53,19 +53,19 @@ static int simpleInstruction(const char* name, int offset) {
 }
 
 static int constantInstruction(const char* name, Chunk* chunk, int offset) {
-  uint8_t constant = chunk->code[offset + 1];
-  printf("%-16s %4d '", name, constant);
-  printValue(chunk->constants.values[constant]);
+  uint8_t index = chunk->code[offset + 1];
+  printf("%-16s %4d '", name, index);
+  printValue(chunk->constants.values[index]);
   printf("'\n");
   return offset + 2;
 }
 
 static int longConstantInstruction(const char* name, Chunk* chunk, int offset) {
-  uint32_t constant = chunk->code[offset + 1] |
-                     (chunk->code[offset + 2] << 8) |
-                     (chunk->code[offset + 3] << 16);
-  printf("%-16s %4d '", name, constant);
-  printValue(chunk->constants.values[constant]);
+  uint32_t index = (uint32_t) (((uint32_t)(chunk->code[offset + 1] << 16)
+                            |   (uint32_t)(chunk->code[offset + 2] << 8))
+                            |   (uint32_t)(chunk->code[offset + 3]));
+  printf("%-16s %4d '", name, index);
+  printValue(chunk->constants.values[index]);
   printf("'\n");
   return offset + 4;
 }

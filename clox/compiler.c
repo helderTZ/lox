@@ -102,22 +102,32 @@ static void emitBytes(uint8_t byte1, uint8_t byte2) {
   emitByte(byte2);
 }
 
+static void emitBytesLong(uint8_t byte1, uint32_t bytes234) {
+  emitByte(byte1);
+  emitByte((uint8_t)(bytes234 >> 16 & 0xff));
+  emitByte((uint8_t)(bytes234 >> 8  & 0xff));
+  emitByte((uint8_t)(bytes234       & 0xff));
+}
+
 static void emitReturn() {
   emitByte(OP_RETURN);
 }
 
 static uint8_t makeConstant(Value value) {
-  int constant = addConstant(currentChunk(), value);
-  if (constant > UINT8_MAX) {
-    error("Too many constants in one chunk.");
-    return 0;
-  }
+  int index = addConstant(currentChunk(), value);
+  return (uint8_t)index;
+}
 
-  return (uint8_t)constant;
+static uint32_t makeLongConstant(Value value) {
+  int index = addConstant(currentChunk(), value);
+  return (uint32_t)index;
 }
 
 static void emitConstant(Value value) {
-  emitBytes(OP_CONSTANT, makeConstant(value));
+  if (currentChunk()->constants.count > 255) {
+    emitBytesLong(OP_CONSTANT_LONG, makeLongConstant(value));
+  } else
+    emitBytes(OP_CONSTANT, makeConstant(value));
 }
 
 static void endCompiler() {

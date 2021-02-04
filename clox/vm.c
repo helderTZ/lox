@@ -84,11 +84,11 @@ static InterpretResult run() {
         break;
       }
       case OP_CONSTANT_LONG: {
-        uint8_t byte1 = (uint8_t) AS_NUMBER(READ_CONSTANT());
-        uint8_t byte2 = (uint8_t) AS_NUMBER(READ_CONSTANT());
-        uint8_t byte3 = (uint8_t) AS_NUMBER(READ_CONSTANT());
-        Value constant = NUMBER_VAL( (double) (byte1 | byte2 << 8 | byte3 << 16) );
-        // Value constant = NUMBER_VAL( (double) ( (uint8_t) AS_NUMBER(READ_CONSTANT()) | (uint8_t) AS_NUMBER(READ_CONSTANT()) << 8 | (uint8_t) AS_NUMBER(READ_CONSTANT()) << 16) );
+        uint8_t index_byte1 = READ_BYTE();
+        uint8_t index_byte2 = READ_BYTE();
+        uint8_t index_byte3 = READ_BYTE();
+        uint32_t full_index = index_byte1 << 16 | index_byte2 << 8 | index_byte3;
+        Value constant = vm.chunk->constants.values[full_index];
         push(constant);
         break;
       }
