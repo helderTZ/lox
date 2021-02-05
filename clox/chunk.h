@@ -10,6 +10,8 @@ typedef enum {
   OP_NIL,
   OP_TRUE,
   OP_FALSE,
+  OP_ZERO,
+  OP_ONE,
   OP_EQUAL,
   OP_GREATER,
   OP_LESS,

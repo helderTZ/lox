@@ -198,6 +198,8 @@ static void grouping() {
 
 static void number() {
   double value = strtod(parser.previous.start, NULL);
+  if (value == 0) { emitByte(OP_ZERO); return; }
+  if (value == 1) { emitByte(OP_ONE); return; }
   emitConstant(NUMBER_VAL(value));
 }
 
