@@ -9,5 +9,7 @@
 void disassembleChunk(Chunk* chunk, const char* name);
 int disassembleInstruction(Chunk* chunk, int offset);
 void inspectVm(VM* vm);
+void inspectStack(VM* vm);
+void inspectTable(Table* table);
 
 #endif

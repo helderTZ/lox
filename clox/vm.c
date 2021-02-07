@@ -96,18 +96,13 @@ static InterpretResult run() {
     } while (false)
 
   for (;;) {
-#ifdef DEBUG_TRACE_EXECUTION
-    printf("          ");
-    for (Value* slot = vm.stack; slot < vm.stackTop; slot++) {
-      printf("[ ");
-      printValue(*slot);
-      printf(" ]");
-    }
-    printf("\n");
-    disassembleInstruction(vm.chunk, (int)(vm.ip - vm.chunk->code));
-#endif
 #ifdef DEBUG_VM_TABLES
-    inspectVm(&vm);
+    // inspectVm(&vm);
+    // inspectTable(&vm.globals);
+#endif
+#ifdef DEBUG_TRACE_EXECUTION
+    inspectStack(&vm);
+    disassembleInstruction(vm.chunk, (int)(vm.ip - vm.chunk->code));
 #endif
     uint8_t instruction;
     switch (instruction = READ_BYTE()) {

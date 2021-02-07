@@ -21,6 +21,17 @@ void inspectTable(Table* table) {
     }
   }
 }
+
+void inspectStack(VM* vm) {
+  printf("          ");
+    for (Value* slot = vm->stack; slot < vm->stackTop; slot++) {
+      printf("[ ");
+      printValue(*slot);
+      printf(" ]");
+    }
+    printf("\n");
+}
+
 void inspectVm(VM* vm) {
   printf("Table strings:\n");
   inspectTable(&vm->strings);
@@ -29,11 +40,13 @@ void inspectVm(VM* vm) {
 }
 
 void disassembleChunk(Chunk* chunk, const char* name) {
-  printf("== %s ==\n", name);
+  int chars_printed = printf("==== %s ====\n", name);
 
   for (int offset = 0; offset < chunk->count;) {
     offset = disassembleInstruction(chunk, offset);
   }
+  for(int i = chars_printed; i > 0; i--) printf("=");
+  printf("\n");
 }
 
 int disassembleInstruction(Chunk* chunk, int offset) {

@@ -213,7 +213,7 @@ static void endScope() {
   localsToPop -= current->localCount;
   if (localsToPop > 1)
     emitBytes(OP_POPN, (uint8_t)localsToPop);
-  else
+  else if(localsToPop == 1)
     emitByte(OP_POP);
 }
 
