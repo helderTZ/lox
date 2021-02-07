@@ -7,6 +7,24 @@ static int simpleInstruction(const char* name, int offset);
 static int constantInstruction(const char* name, Chunk* chunk, int offset);
 static int longConstantInstruction(const char* name, Chunk* chunk, int offset);
 
+void inspectTable(Table* table) {
+  printf("  count: %d, capacity: %d\n", table->count, table->capacity);
+  for (int i = 0; i < table->capacity; ++i) {
+    Entry* e = &table->entries[i];
+    if (e->key != NULL) {
+      printf("  [ %04d : %.*s ==> ", i, e->key->length, e->key->chars);
+      printValue(e->value);
+      printf(" ]\n");
+    }
+  }
+}
+void inspectVm(VM* vm) {
+  printf("Table strings:\n");
+  inspectTable(&vm->strings);
+  printf("Table globals:\n");
+  inspectTable(&vm->globals);
+}
+
 void disassembleChunk(Chunk* chunk, const char* name) {
   printf("== %s ==\n", name);
 
