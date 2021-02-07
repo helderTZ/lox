@@ -12,7 +12,7 @@ void inspectTable(Table* table) {
   for (int i = 0; i < table->capacity; ++i) {
     Entry* e = &table->entries[i];
     if (e->key != NULL) {
-      printf("  [ %04d : %*.s ==> ", i, e->key->length, e->key->chars);
+      printf("  [ %04d : %.*s ==> ", i, e->key->length, e->key->chars);
       printValue(e->value);
       printf(" ]\n");
     }
