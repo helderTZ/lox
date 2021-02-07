@@ -175,12 +175,16 @@ static void beginScope() {
 static void endScope() {
   current->scopeDepth--;
 
+  int localsToPop = current->localCount;
   while (current->localCount > 0 &&
-         current->locals[current->localCount - 1].depth >
-            current->scopeDepth) {
-    emitByte(OP_POP);
+         current->locals[current->localCount - 1].depth > current->scopeDepth) {
     current->localCount--;
   }
+  localsToPop -= current->localCount;
+  if (localsToPop > 1)
+    emitBytes(OP_POPN, (uint8_t)localsToPop);
+  else
+    emitByte(OP_POP);
 }
 
 // forward declarations
@@ -423,8 +427,7 @@ static uint8_t parseVariable(const char* errorMessage) {
 }
 
 static void markInitialized() {
-  current->locals[current->localCount - 1].depth =
-      current->scopeDepth;
+  current->locals[current->localCount - 1].depth = current->scopeDepth;
 }
 
 static void defineVariable(uint8_t global) {

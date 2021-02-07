@@ -131,6 +131,12 @@ static InterpretResult run() {
       case OP_ONE: push(NUMBER_VAL(1)); break;
       case OP_POP: pop(); break;
 
+      case OP_POPN: {
+        uint8_t pops = READ_BYTE();
+        while(pops-- > 0) pop();
+        break;
+      }
+
       case OP_GET_LOCAL: {
         uint8_t slot = READ_BYTE();
         push(vm.stack[slot]); 
