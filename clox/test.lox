@@ -1,5 +1,6 @@
-"hello"
-6*0
-"bye"
-"hello" + " " + "bye"
-2+2
+var va = "a";
+var vb = "b";
+var vc = va==vb;
+print va + vb;
+print "hallo" == "hello";
+print "bye" == "bye";

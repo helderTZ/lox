@@ -104,7 +104,7 @@ static InterpretResult run() {
     }
     printf("\n");
     disassembleInstruction(vm.chunk, (int)(vm.ip - vm.chunk->code));
-    inspectVm(&vm);
+    // inspectVm(&vm);
 #endif
     uint8_t instruction;
     switch (instruction = READ_BYTE()) {
@@ -130,6 +130,18 @@ static InterpretResult run() {
       case OP_ZERO: push(NUMBER_VAL(0)); break;
       case OP_ONE: push(NUMBER_VAL(1)); break;
       case OP_POP: pop(); break;
+
+      case OP_GET_LOCAL: {
+        uint8_t slot = READ_BYTE();
+        push(vm.stack[slot]); 
+        break;
+      }
+
+      case OP_SET_LOCAL: {
+        uint8_t slot = READ_BYTE();
+        vm.stack[slot] = peek(0);
+        break;
+      }
 
       case OP_GET_GLOBAL: {
         ObjString* name = READ_STRING();

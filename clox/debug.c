@@ -3,9 +3,11 @@
 #include "debug.h"
 #include "value.h"
 
+// forward declarations
 static int simpleInstruction(const char* name, int offset);
 static int constantInstruction(const char* name, Chunk* chunk, int offset);
 static int longConstantInstruction(const char* name, Chunk* chunk, int offset);
+static int byteInstruction(const char* name, Chunk* chunk, int offset);
 
 void inspectTable(Table* table) {
   printf("  count: %d, capacity: %d\n", table->count, table->capacity);
@@ -53,6 +55,8 @@ int disassembleInstruction(Chunk* chunk, int offset) {
     case OP_ZERO:          return simpleInstruction("OP_ZERO", offset);
     case OP_ONE:           return simpleInstruction("OP_ONE", offset);
     case OP_POP:           return simpleInstruction("OP_POP", offset);
+    case OP_GET_LOCAL:     return byteInstruction("OP_GET_LOCAL", chunk, offset);
+    case OP_SET_LOCAL:     return byteInstruction("OP_SET_LOCAL", chunk, offset);
     case OP_GET_GLOBAL:    return constantInstruction("OP_GET_GLOBAL", chunk, offset);
     case OP_DEFINE_GLOBAL: return constantInstruction("OP_DEFINE_GLOBAL", chunk, offset);
     case OP_SET_GLOBAL:    return constantInstruction("OP_SET_GLOBAL", chunk, offset);
@@ -76,6 +80,12 @@ int disassembleInstruction(Chunk* chunk, int offset) {
 static int simpleInstruction(const char* name, int offset) {
   printf("%s\n", name);
   return offset + 1;
+}
+
+static int byteInstruction(const char* name, Chunk* chunk, int offset) {
+  uint8_t slot = chunk->code[offset + 1];
+  printf("%-16s %4d\n", name, slot);
+  return offset + 2; 
 }
 
 static int constantInstruction(const char* name, Chunk* chunk, int offset) {
