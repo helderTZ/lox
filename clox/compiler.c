@@ -51,11 +51,11 @@ typedef struct {
   int scopeDepth;
 } Compiler;
 
+// GLobals
 Parser parser;
-
 Compiler* current = NULL;
-
 Chunk* compilingChunk;
+Table stringConstants;
 
 static Chunk* currentChunk() {
   return compilingChunk;
@@ -367,7 +367,17 @@ static void parsePrecedence(Precedence precedence) {
 }
 
 static uint8_t identifierConstant(Token* name) {
-  return makeConstant(OBJ_VAL(copyString(name->start, name->length)));
+  // See if we already have it.
+  ObjString* string = copyString(name->start, name->length);
+  Value indexValue;
+  if (tableGet(&stringConstants, string, &indexValue)) {
+    // We do.
+    return (uint8_t)AS_NUMBER(indexValue);
+  }
+
+  uint8_t index = makeConstant(OBJ_VAL(string));
+  tableSet(&stringConstants, string, NUMBER_VAL((double)index));
+  return index;
 }
 
 static bool identifiersEqual(Token* a, Token* b) {
@@ -533,10 +543,11 @@ bool compile(const char* source, Chunk* chunk) {
   initScanner(source);
   Compiler compiler;
   initCompiler(&compiler);
-  compilingChunk = chunk;
 
+  compilingChunk = chunk;
   parser.hadError = false;
   parser.panicMode = false;
+  initTable(&stringConstants);
 
   advance();
 
@@ -545,6 +556,7 @@ bool compile(const char* source, Chunk* chunk) {
   }
 
   endCompiler();
+  freeTable(&stringConstants);
 
   return !parser.hadError;
 }
