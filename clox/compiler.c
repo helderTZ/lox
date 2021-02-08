@@ -236,15 +236,14 @@ static void and_(bool canAssign) {
   patchJump(endJump);
 }
 
-static void conditional(bool canAssign) {
+static void ternary(bool canAssign) {
   // // Compile the then branch.
-  // parsePrecedence(compiler, PREC_CONDITIONAL);
+  // parsePrecedence(PREC_CONDITIONAL);
 
-  // consume(compiler, TOKEN_COLON,
-  //     "Expect ':' after then branch of conditional operator.");
+  // consume(TOKEN_COLON, "Expect ':' after then branch of conditional operator.");
 
   // // Compile the else branch.
-  // parsePrecedence(compiler, PREC_ASSIGNMENT);
+  // parsePrecedence(PREC_ASSIGNMENT);
 }
 
 static void binary(bool canAssign) {
@@ -350,6 +349,8 @@ static void unary(bool canAssign) {
 }
 
 ParseRule rules[] = {
+  [TOKEN_CASE]          = {NULL,        NULL,   PREC_NONE},
+  [TOKEN_DEFAULT]       = {NULL,        NULL,   PREC_NONE},
   [TOKEN_LEFT_PAREN]    = {grouping,    NULL,   PREC_NONE},
   [TOKEN_RIGHT_PAREN]   = {NULL,        NULL,   PREC_NONE},
   [TOKEN_LEFT_BRACE]    = {NULL,        NULL,   PREC_NONE}, 
@@ -361,7 +362,7 @@ ParseRule rules[] = {
   [TOKEN_SEMICOLON]     = {NULL,        NULL,   PREC_NONE},
   [TOKEN_SLASH]         = {NULL,        binary, PREC_FACTOR},
   [TOKEN_STAR]          = {NULL,        binary, PREC_FACTOR},
-  [TOKEN_INTERROGATION] = {conditional, NULL,   PREC_NONE},
+  [TOKEN_INTERROGATION] = {ternary,     NULL,   PREC_NONE},
   [TOKEN_COLON]         = {NULL,        NULL,   PREC_NONE},
   [TOKEN_BANG]          = {unary,       NULL,   PREC_NONE},
   [TOKEN_BANG_EQUAL]    = {NULL,        binary, PREC_EQUALITY},
@@ -373,6 +374,7 @@ ParseRule rules[] = {
   [TOKEN_LESS_EQUAL]    = {NULL,        binary, PREC_COMPARISON},
   [TOKEN_IDENTIFIER]    = {variable,    NULL,   PREC_NONE},
   [TOKEN_STRING]        = {string,      NULL,   PREC_NONE},
+  [TOKEN_SWITCH]        = {NULL,        NULL,   PREC_NONE},
   [TOKEN_NUMBER]        = {number,      NULL,   PREC_NONE},
   [TOKEN_AND]           = {NULL,        and_,   PREC_AND},
   [TOKEN_CLASS]         = {NULL,        NULL,   PREC_NONE},
@@ -638,6 +640,78 @@ static void synchronize() {
   }
 }
 
+static void switchStatement() {
+#define MAX_CASES 256
+  consume(TOKEN_LEFT_PAREN, "Expect '(' after 'switch'.");
+  expression();
+  consume(TOKEN_RIGHT_PAREN, "Expect ')' after value.");
+  consume(TOKEN_LEFT_BRACE, "Expect '{' before switch cases.");
+
+  int state = 0; // 0: before all cases, 1: before default, 2: after default.
+  int caseEnds[MAX_CASES];
+  int caseCount = 0;
+  int previousCaseSkip = -1;
+
+  while (!match(TOKEN_RIGHT_BRACE) && !check(TOKEN_EOF)) {
+    if (match(TOKEN_CASE) || match(TOKEN_DEFAULT)) {
+      TokenType caseType = parser.previous.type;
+
+      if (state == 2) {
+        error("Can't have another case or default after the default case.");
+      }
+
+      if (state == 1) {
+        // At the end of the previous case, jump over the others.
+        caseEnds[caseCount++] = emitJump(OP_JUMP);
+
+        // Patch its condition to jump to the next case (this one).
+        patchJump(previousCaseSkip);
+        emitByte(OP_POP);
+      }
+
+      if (caseType == TOKEN_CASE) {
+        state = 1;
+
+        // See if the case is equal to the value.
+        emitByte(OP_DUP);
+        expression();
+
+        consume(TOKEN_COLON, "Expect ':' after case value.");
+
+        emitByte(OP_EQUAL);
+        previousCaseSkip = emitJump(OP_JUMP_IF_FALSE);
+
+        // Pop the comparison result.
+        emitByte(OP_POP);
+      } else {
+        state = 2;
+        consume(TOKEN_COLON, "Expect ':' after default.");
+        previousCaseSkip = -1;
+      }
+    } else {
+      // Otherwise, it's a statement inside the current case.
+      if (state == 0) {
+        error("Can't have statements before any case.");
+      }
+      statement();
+    }
+  }
+
+  // If we ended without a default case, patch its condition jump.
+  if (state == 1) {
+    patchJump(previousCaseSkip);
+    emitByte(OP_POP);
+  }
+
+  // Patch all the case jumps to the end.
+  for (int i = 0; i < caseCount; i++) {
+    patchJump(caseEnds[i]);
+  }
+
+  emitByte(OP_POP); // The switch value.
+#undef MAX_CASES
+}
+
 static void whileStatement() {
   int loopStart = currentChunk()->count;
 
@@ -675,6 +749,8 @@ static void statement() {
     ifStatement();
   } else if (match(TOKEN_WHILE)) {
     whileStatement();
+  } else if (match(TOKEN_SWITCH)) {
+    switchStatement();
   } else if (match(TOKEN_LEFT_BRACE)) {
     beginScope();
     block();

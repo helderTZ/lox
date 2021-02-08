@@ -19,6 +19,7 @@ typedef enum {
   OP_SET_GLOBAL,
   OP_POP,
   OP_POPN,
+  OP_DUP,
   OP_EQUAL,
   OP_GREATER,
   OP_LESS,
