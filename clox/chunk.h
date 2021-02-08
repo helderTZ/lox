@@ -21,6 +21,7 @@ typedef enum {
   OP_POPN,
   OP_DUP,
   OP_EQUAL,
+  OP_NEQUAL,
   OP_GREATER,
   OP_LESS,
   OP_ADD,
