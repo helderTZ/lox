@@ -56,6 +56,11 @@ Parser parser;
 Compiler* current = NULL;
 Chunk* compilingChunk;
 Table stringConstants;
+bool inLoop = false;
+
+#define MAX_BREAKS 255
+int breakOffset[MAX_BREAKS] = {};
+int breakCount = -1;
 
 static Chunk* currentChunk() {
   return compilingChunk;
@@ -236,6 +241,13 @@ static void and_(bool canAssign) {
   patchJump(endJump);
 }
 
+static void break_(bool canAssign) {
+  if (!inLoop) error("A 'break' outside of a loop is not allowed.");
+
+  breakOffset[breakCount++] =  emitJump(OP_JUMP);
+  emitByte(OP_POP);
+}
+
 static void ternary(bool canAssign) {
   // // Compile the then branch.
   // parsePrecedence(PREC_CONDITIONAL);
@@ -349,6 +361,7 @@ static void unary(bool canAssign) {
 }
 
 ParseRule rules[] = {
+  [TOKEN_BREAK]         = {break_,      NULL,   PREC_NONE},
   [TOKEN_CASE]          = {NULL,        NULL,   PREC_NONE},
   [TOKEN_DEFAULT]       = {NULL,        NULL,   PREC_NONE},
   [TOKEN_LEFT_PAREN]    = {grouping,    NULL,   PREC_NONE},
@@ -577,6 +590,10 @@ static void forStatement() {
     patchJump(bodyJump);
   }
 
+  int currentBreakCount = breakCount;
+  bool beforeLoop = inLoop;
+  if (!beforeLoop) inLoop = true;
+
   statement();
 
   emitLoop(loopStart);
@@ -585,6 +602,13 @@ static void forStatement() {
     patchJump(exitJump);
     emitByte(OP_POP); // Condition.
   }
+
+  // patch jumps of any breaks inside the loop
+  for(; breakCount > currentBreakCount; breakCount--) {
+    patchJump(breakOffset[breakCount]);
+    emitByte(OP_POP);
+  }
+  inLoop = beforeLoop;
 
   endScope();
 }
@@ -720,14 +744,24 @@ static void whileStatement() {
   consume(TOKEN_RIGHT_PAREN, "Expect ')' after condition.");
 
   int exitJump = emitJump(OP_JUMP_IF_FALSE);
-
   emitByte(OP_POP);
+
+  int currentBreakCount = breakCount;
+  bool beforeLoop = inLoop;
+  if (!beforeLoop) inLoop = true;
+
   statement();
 
   emitLoop(loopStart);
-
   patchJump(exitJump);
   emitByte(OP_POP);
+
+  // patch jumps of any breaks inside the loop
+  for(; breakCount > currentBreakCount; breakCount--) {
+    patchJump(breakOffset[breakCount]);
+    emitByte(OP_POP);
+  }
+  inLoop = beforeLoop;
 }
 
 static void declaration() {
