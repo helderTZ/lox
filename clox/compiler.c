@@ -59,6 +59,7 @@ Chunk* compilingChunk;
 Table stringConstants;
 int innermostLoopStart = -1;
 int innermostLoopScopeDepth = 0;
+int innermostBreakOffset = 0;
 
 static Chunk* currentChunk() {
   return compilingChunk;
@@ -547,8 +548,14 @@ static void breakStatement() {
   }
   consume(TOKEN_SEMICOLON, "Expect ';' after 'break'.");
 
-  // breakOffset[breakCount++] =  emitJump(OP_JUMP);
-  // emitByte(OP_POP);
+  // Discard any locals created inside the loop.
+  for (int i = current->localCount - 1;
+       i >= 0 && current->locals[i].depth > innermostLoopScopeDepth;
+       i--) {
+    emitByte(OP_POP);
+  }
+
+  innermostBreakOffset = emitJump(OP_JUMP);
 }
 
 static void continueStatement() {
@@ -583,6 +590,7 @@ static void forStatement() {
 
   int surroundingLoopStart = innermostLoopStart;
   int surroundingLoopScopeDepth = innermostLoopScopeDepth;
+  int sorroundingLoopBreakOffset = innermostBreakOffset;
   innermostLoopStart = currentChunk()->count;
   innermostLoopScopeDepth = current->scopeDepth;
 
@@ -623,6 +631,12 @@ static void forStatement() {
   innermostLoopStart = surroundingLoopStart;
   innermostLoopScopeDepth = surroundingLoopScopeDepth;
 
+  // Patch jump from inner break, if it exists
+  if (innermostBreakOffset > sorroundingLoopBreakOffset) {
+    patchJump(innermostBreakOffset);
+  }
+  innermostBreakOffset = sorroundingLoopBreakOffset;
+
   endScope();
 }
 
@@ -648,32 +662,6 @@ static void printStatement() {
   expression();
   consume(TOKEN_SEMICOLON, "Expect ';' after value.");
   emitByte(OP_PRINT);
-}
-
-static void synchronize() {
-  parser.panicMode = false;
-
-  while (parser.current.type != TOKEN_EOF) {
-    if (parser.previous.type == TOKEN_SEMICOLON) return;
-
-    switch (parser.current.type) {
-      case TOKEN_CLASS:
-      case TOKEN_FUN:
-      case TOKEN_VAR:
-      case TOKEN_FOR:
-      case TOKEN_IF:
-      case TOKEN_WHILE:
-      case TOKEN_PRINT:
-      case TOKEN_RETURN:
-        return;
-
-      default:
-        // Do nothing.
-        ;
-    }
-
-    advance();
-  }
 }
 
 static void switchStatement() {
@@ -769,6 +757,32 @@ static void whileStatement() {
 
   innermostLoopStart = surroundingLoopStart;
   innermostLoopScopeDepth = surroundingLoopScopeDepth;
+}
+
+static void synchronize() {
+  parser.panicMode = false;
+
+  while (parser.current.type != TOKEN_EOF) {
+    if (parser.previous.type == TOKEN_SEMICOLON) return;
+
+    switch (parser.current.type) {
+      case TOKEN_CLASS:
+      case TOKEN_FUN:
+      case TOKEN_VAR:
+      case TOKEN_FOR:
+      case TOKEN_IF:
+      case TOKEN_WHILE:
+      case TOKEN_PRINT:
+      case TOKEN_RETURN:
+        return;
+
+      default:
+        // Do nothing.
+        ;
+    }
+
+    advance();
+  }
 }
 
 static void declaration() {
