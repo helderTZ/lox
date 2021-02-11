@@ -10,6 +10,7 @@
 #include "debug.h"
 #endif
 
+
 typedef struct {
   Token current;
   Token previous;
@@ -748,7 +749,10 @@ static void switchStatement() {
 }
 
 static void whileStatement() {
-  int loopStart = currentChunk()->count;
+  int surroundingLoopStart = innermostLoopStart;
+  int surroundingLoopScopeDepth = innermostLoopScopeDepth;
+  innermostLoopStart = currentChunk()->count;
+  innermostLoopScopeDepth = current->scopeDepth;
 
   consume(TOKEN_LEFT_PAREN, "Expect '(' after 'while'.");
   expression();
@@ -759,9 +763,12 @@ static void whileStatement() {
 
   statement();
 
-  emitLoop(loopStart);
+  emitLoop(innermostLoopStart);
   patchJump(exitJump);
   emitByte(OP_POP);
+
+  innermostLoopStart = surroundingLoopStart;
+  innermostLoopScopeDepth = surroundingLoopScopeDepth;
 }
 
 static void declaration() {
