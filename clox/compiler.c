@@ -739,6 +739,7 @@ static void switchStatement() {
 static void whileStatement() {
   int surroundingLoopStart = innermostLoopStart;
   int surroundingLoopScopeDepth = innermostLoopScopeDepth;
+  int sorroundingLoopBreakOffset = innermostBreakOffset;
   innermostLoopStart = currentChunk()->count;
   innermostLoopScopeDepth = current->scopeDepth;
 
@@ -757,6 +758,12 @@ static void whileStatement() {
 
   innermostLoopStart = surroundingLoopStart;
   innermostLoopScopeDepth = surroundingLoopScopeDepth;
+
+  // Patch jump from inner break, if it exists
+  if (innermostBreakOffset > sorroundingLoopBreakOffset) {
+    patchJump(innermostBreakOffset);
+  }
+  innermostBreakOffset = sorroundingLoopBreakOffset;
 }
 
 static void synchronize() {
