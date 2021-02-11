@@ -10,6 +10,7 @@
 #include "debug.h"
 #endif
 
+
 typedef struct {
   Token current;
   Token previous;
@@ -56,6 +57,9 @@ Parser parser;
 Compiler* current = NULL;
 Chunk* compilingChunk;
 Table stringConstants;
+int innermostLoopStart = -1;
+int innermostLoopScopeDepth = 0;
+int innermostBreakOffset = 0;
 
 static Chunk* currentChunk() {
   return compilingChunk;
@@ -141,7 +145,6 @@ static void emitLoop(int loopStart) {
   emitByte((offset >> 8) & 0xff);
   emitByte(offset & 0xff);
 }
-
 
 static int emitJump(uint8_t instruction) {
   emitByte(instruction);
@@ -349,7 +352,9 @@ static void unary(bool canAssign) {
 }
 
 ParseRule rules[] = {
+  [TOKEN_BREAK]         = {NULL,        NULL,   PREC_NONE},
   [TOKEN_CASE]          = {NULL,        NULL,   PREC_NONE},
+  [TOKEN_CONTINUE]      = {NULL,        NULL,   PREC_NONE},
   [TOKEN_DEFAULT]       = {NULL,        NULL,   PREC_NONE},
   [TOKEN_LEFT_PAREN]    = {grouping,    NULL,   PREC_NONE},
   [TOKEN_RIGHT_PAREN]   = {NULL,        NULL,   PREC_NONE},
@@ -537,6 +542,39 @@ static void expressionStatement() {
   emitByte(OP_POP);
 }
 
+static void breakStatement() {
+  if(innermostLoopStart == -1) {
+    error("A 'break' outside of a loop is not allowed.");
+  }
+  consume(TOKEN_SEMICOLON, "Expect ';' after 'break'.");
+
+  // Discard any locals created inside the loop.
+  for (int i = current->localCount - 1;
+       i >= 0 && current->locals[i].depth > innermostLoopScopeDepth;
+       i--) {
+    emitByte(OP_POP);
+  }
+
+  innermostBreakOffset = emitJump(OP_JUMP);
+}
+
+static void continueStatement() {
+  if(innermostLoopStart == -1) {
+    error("A 'continue' outside of a loop is not alllowed.");
+  }
+  consume(TOKEN_SEMICOLON, "Expect ';' after 'continue'.");
+
+  // Discard any locals created inside the loop.
+  for (int i = current->localCount - 1;
+       i >= 0 && current->locals[i].depth > innermostLoopScopeDepth;
+       i--) {
+    emitByte(OP_POP);
+  }
+
+  // Jump to top of current innermost loop.
+  emitLoop(innermostLoopStart);
+}
+
 static void forStatement() {
   beginScope();
 
@@ -550,7 +588,11 @@ static void forStatement() {
     expressionStatement();
   }
 
-  int loopStart = currentChunk()->count;
+  int surroundingLoopStart = innermostLoopStart;
+  int surroundingLoopScopeDepth = innermostLoopScopeDepth;
+  int sorroundingLoopBreakOffset = innermostBreakOffset;
+  innermostLoopStart = currentChunk()->count;
+  innermostLoopScopeDepth = current->scopeDepth;
 
   // Condition clause
   int exitJump = -1;
@@ -572,19 +614,28 @@ static void forStatement() {
     emitByte(OP_POP);
     consume(TOKEN_RIGHT_PAREN, "Expect ')' after for clauses.");
 
-    emitLoop(loopStart);
-    loopStart = incrementStart;
+    emitLoop(innermostLoopStart);
+    innermostLoopStart = incrementStart;
     patchJump(bodyJump);
   }
 
   statement();
 
-  emitLoop(loopStart);
+  emitLoop(innermostLoopStart);
 
   if (exitJump != -1) {
     patchJump(exitJump);
     emitByte(OP_POP); // Condition.
   }
+
+  innermostLoopStart = surroundingLoopStart;
+  innermostLoopScopeDepth = surroundingLoopScopeDepth;
+
+  // Patch jump from inner break, if it exists
+  if (innermostBreakOffset > sorroundingLoopBreakOffset) {
+    patchJump(innermostBreakOffset);
+  }
+  innermostBreakOffset = sorroundingLoopBreakOffset;
 
   endScope();
 }
@@ -607,37 +658,10 @@ static void ifStatement() {
   patchJump(elseJump);
 }
 
-
 static void printStatement() {
   expression();
   consume(TOKEN_SEMICOLON, "Expect ';' after value.");
   emitByte(OP_PRINT);
-}
-
-static void synchronize() {
-  parser.panicMode = false;
-
-  while (parser.current.type != TOKEN_EOF) {
-    if (parser.previous.type == TOKEN_SEMICOLON) return;
-
-    switch (parser.current.type) {
-      case TOKEN_CLASS:
-      case TOKEN_FUN:
-      case TOKEN_VAR:
-      case TOKEN_FOR:
-      case TOKEN_IF:
-      case TOKEN_WHILE:
-      case TOKEN_PRINT:
-      case TOKEN_RETURN:
-        return;
-
-      default:
-        // Do nothing.
-        ;
-    }
-
-    advance();
-  }
 }
 
 static void switchStatement() {
@@ -713,21 +737,59 @@ static void switchStatement() {
 }
 
 static void whileStatement() {
-  int loopStart = currentChunk()->count;
+  int surroundingLoopStart = innermostLoopStart;
+  int surroundingLoopScopeDepth = innermostLoopScopeDepth;
+  int sorroundingLoopBreakOffset = innermostBreakOffset;
+  innermostLoopStart = currentChunk()->count;
+  innermostLoopScopeDepth = current->scopeDepth;
 
   consume(TOKEN_LEFT_PAREN, "Expect '(' after 'while'.");
   expression();
   consume(TOKEN_RIGHT_PAREN, "Expect ')' after condition.");
 
   int exitJump = emitJump(OP_JUMP_IF_FALSE);
-
   emitByte(OP_POP);
+
   statement();
 
-  emitLoop(loopStart);
-
+  emitLoop(innermostLoopStart);
   patchJump(exitJump);
   emitByte(OP_POP);
+
+  innermostLoopStart = surroundingLoopStart;
+  innermostLoopScopeDepth = surroundingLoopScopeDepth;
+
+  // Patch jump from inner break, if it exists
+  if (innermostBreakOffset > sorroundingLoopBreakOffset) {
+    patchJump(innermostBreakOffset);
+  }
+  innermostBreakOffset = sorroundingLoopBreakOffset;
+}
+
+static void synchronize() {
+  parser.panicMode = false;
+
+  while (parser.current.type != TOKEN_EOF) {
+    if (parser.previous.type == TOKEN_SEMICOLON) return;
+
+    switch (parser.current.type) {
+      case TOKEN_CLASS:
+      case TOKEN_FUN:
+      case TOKEN_VAR:
+      case TOKEN_FOR:
+      case TOKEN_IF:
+      case TOKEN_WHILE:
+      case TOKEN_PRINT:
+      case TOKEN_RETURN:
+        return;
+
+      default:
+        // Do nothing.
+        ;
+    }
+
+    advance();
+  }
 }
 
 static void declaration() {
@@ -755,6 +817,10 @@ static void statement() {
     beginScope();
     block();
     endScope();
+  } else if (match(TOKEN_BREAK)) {
+    breakStatement();
+  } else if (match(TOKEN_CONTINUE)) {
+    continueStatement();
   } else {
     expressionStatement();
   }

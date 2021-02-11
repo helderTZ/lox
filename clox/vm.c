@@ -24,7 +24,7 @@ static void runtimeError(const char* format, ...) {
   fputs("\n", stderr);
 
   size_t instruction = vm.ip - vm.chunk->code - 1;
-  int line = vm.chunk->lines[instruction].line;
+  int line = getLine(vm.chunk, instruction);
   fprintf(stderr, "[line %d] in script\n", line);
 
   resetStack();
@@ -102,6 +102,7 @@ static InterpretResult run() {
 #endif
 #ifdef DEBUG_TRACE_EXECUTION
     inspectStack(&vm);
+    // inspectChunk(vm.chunk);
     disassembleInstruction(vm.chunk, (int)(vm.ip - vm.chunk->code));
 #endif
     uint8_t instruction;
