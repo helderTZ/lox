@@ -56,11 +56,8 @@ Parser parser;
 Compiler* current = NULL;
 Chunk* compilingChunk;
 Table stringConstants;
-bool inLoop = false;
-
-#define MAX_BREAKS 255
-int breakOffset[MAX_BREAKS] = {};
-int breakCount = -1;
+int innermostLoopStart = -1;
+int innermostLoopScopeDepth = 0;
 
 static Chunk* currentChunk() {
   return compilingChunk;
@@ -146,7 +143,6 @@ static void emitLoop(int loopStart) {
   emitByte((offset >> 8) & 0xff);
   emitByte(offset & 0xff);
 }
-
 
 static int emitJump(uint8_t instruction) {
   emitByte(instruction);
@@ -239,13 +235,6 @@ static void and_(bool canAssign) {
   parsePrecedence(PREC_AND);
 
   patchJump(endJump);
-}
-
-static void break_(bool canAssign) {
-  if (!inLoop) error("A 'break' outside of a loop is not allowed.");
-
-  breakOffset[breakCount++] =  emitJump(OP_JUMP);
-  emitByte(OP_POP);
 }
 
 static void ternary(bool canAssign) {
@@ -361,8 +350,9 @@ static void unary(bool canAssign) {
 }
 
 ParseRule rules[] = {
-  [TOKEN_BREAK]         = {break_,      NULL,   PREC_NONE},
+  [TOKEN_BREAK]         = {NULL,        NULL,   PREC_NONE},
   [TOKEN_CASE]          = {NULL,        NULL,   PREC_NONE},
+  [TOKEN_CONTINUE]      = {NULL,        NULL,   PREC_NONE},
   [TOKEN_DEFAULT]       = {NULL,        NULL,   PREC_NONE},
   [TOKEN_LEFT_PAREN]    = {grouping,    NULL,   PREC_NONE},
   [TOKEN_RIGHT_PAREN]   = {NULL,        NULL,   PREC_NONE},
@@ -550,6 +540,33 @@ static void expressionStatement() {
   emitByte(OP_POP);
 }
 
+static void breakStatement() {
+  if(innermostLoopStart == -1) {
+    error("A 'break' outside of a loop is not allowed.");
+  }
+  consume(TOKEN_SEMICOLON, "Expect ';' after 'break'.");
+
+  // breakOffset[breakCount++] =  emitJump(OP_JUMP);
+  // emitByte(OP_POP);
+}
+
+static void continueStatement() {
+  if(innermostLoopStart == -1) {
+    error("A 'continue' outside of a loop is not alllowed.");
+  }
+  consume(TOKEN_SEMICOLON, "Expect ';' after 'continue'.");
+
+  // Discard any locals created inside the loop.
+  for (int i = current->localCount - 1;
+       i >= 0 && current->locals[i].depth > innermostLoopScopeDepth;
+       i--) {
+    emitByte(OP_POP);
+  }
+
+  // Jump to top of current innermost loop.
+  emitLoop(innermostLoopStart);
+}
+
 static void forStatement() {
   beginScope();
 
@@ -563,7 +580,10 @@ static void forStatement() {
     expressionStatement();
   }
 
-  int loopStart = currentChunk()->count;
+  int surroundingLoopStart = innermostLoopStart;
+  int surroundingLoopScopeDepth = innermostLoopScopeDepth;
+  innermostLoopStart = currentChunk()->count;
+  innermostLoopScopeDepth = current->scopeDepth;
 
   // Condition clause
   int exitJump = -1;
@@ -585,30 +605,22 @@ static void forStatement() {
     emitByte(OP_POP);
     consume(TOKEN_RIGHT_PAREN, "Expect ')' after for clauses.");
 
-    emitLoop(loopStart);
-    loopStart = incrementStart;
+    emitLoop(innermostLoopStart);
+    innermostLoopStart = incrementStart;
     patchJump(bodyJump);
   }
 
-  int currentBreakCount = breakCount;
-  bool beforeLoop = inLoop;
-  if (!beforeLoop) inLoop = true;
-
   statement();
 
-  emitLoop(loopStart);
+  emitLoop(innermostLoopStart);
 
   if (exitJump != -1) {
     patchJump(exitJump);
     emitByte(OP_POP); // Condition.
   }
 
-  // patch jumps of any breaks inside the loop
-  for(; breakCount > currentBreakCount; breakCount--) {
-    patchJump(breakOffset[breakCount]);
-    emitByte(OP_POP);
-  }
-  inLoop = beforeLoop;
+  innermostLoopStart = surroundingLoopStart;
+  innermostLoopScopeDepth = surroundingLoopScopeDepth;
 
   endScope();
 }
@@ -630,7 +642,6 @@ static void ifStatement() {
   if (match(TOKEN_ELSE)) statement();
   patchJump(elseJump);
 }
-
 
 static void printStatement() {
   expression();
@@ -746,22 +757,11 @@ static void whileStatement() {
   int exitJump = emitJump(OP_JUMP_IF_FALSE);
   emitByte(OP_POP);
 
-  int currentBreakCount = breakCount;
-  bool beforeLoop = inLoop;
-  if (!beforeLoop) inLoop = true;
-
   statement();
 
   emitLoop(loopStart);
   patchJump(exitJump);
   emitByte(OP_POP);
-
-  // patch jumps of any breaks inside the loop
-  for(; breakCount > currentBreakCount; breakCount--) {
-    patchJump(breakOffset[breakCount]);
-    emitByte(OP_POP);
-  }
-  inLoop = beforeLoop;
 }
 
 static void declaration() {
@@ -789,6 +789,10 @@ static void statement() {
     beginScope();
     block();
     endScope();
+  } else if (match(TOKEN_BREAK)) {
+    breakStatement();
+  } else if (match(TOKEN_CONTINUE)) {
+    continueStatement();
   } else {
     expressionStatement();
   }

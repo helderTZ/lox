@@ -11,5 +11,6 @@ int disassembleInstruction(Chunk* chunk, int offset);
 void inspectVm(VM* vm);
 void inspectStack(VM* vm);
 void inspectTable(Table* table);
+void inspectChunk(Chunk* chunk);
 
 #endif

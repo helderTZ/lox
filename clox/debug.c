@@ -39,6 +39,16 @@ void inspectVm(VM* vm) {
   inspectTable(&vm->globals);
 }
 
+void inspectChunk(Chunk* chunk) {
+  printf("Constants: ");
+  for(int i = 0; i < chunk->constants.count; i++) {
+    printf("[ ");
+    printValue(chunk->constants.values[i]);
+    printf(" ] ");
+  }
+  printf("\n");
+}
+
 void disassembleChunk(Chunk* chunk, const char* name) {
   int chars_printed = printf("==== %s ====\n", name);
 

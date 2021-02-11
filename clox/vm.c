@@ -102,6 +102,7 @@ static InterpretResult run() {
 #endif
 #ifdef DEBUG_TRACE_EXECUTION
     inspectStack(&vm);
+    // inspectChunk(vm.chunk);
     disassembleInstruction(vm.chunk, (int)(vm.ip - vm.chunk->code));
 #endif
     uint8_t instruction;
