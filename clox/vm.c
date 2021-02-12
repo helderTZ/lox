@@ -1,6 +1,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "common.h"
 #include "compiler.h"
@@ -79,6 +80,43 @@ static void concatenate() {
   push(OBJ_VAL(result));
 }
 
+static void convertNumberToString(double number) {
+  // get int part
+  uint64_t integer = (uint64_t) number;
+  // get decimal part
+  double decimal = number - integer;
+
+  // get number of chars needed to represent int part (in base 10)
+  int nIntChars = 1;
+  for(int remaining = integer; remaining > 0; remaining /= 10) {
+    nIntChars++;
+  }
+  char* str_int = (char*) malloc(nIntChars+1);
+  snprintf(str_int, nIntChars, "%f", integer);
+
+  // get number of chars needed to represent dec part (in base 10)
+  char* str_dec = NULL;
+  int nDecChars = 0;
+  if (decimal != 0) {
+    char dummy[1];
+    int nDecChars = snprintf(dummy, 1, "%f", decimal);
+    str_dec = (char*) malloc(nDecChars+1);
+    snprintf(str_dec, nDecChars, ".%f", decimal);
+  }
+
+  // create full string
+  char* str_full = (char*) malloc(nIntChars + 1 + nDecChars + 1);
+  memcpy(str_full, str_int, nIntChars);
+  memcpy(str_full + nIntChars+1, str_dec, nDecChars);
+  str_full[nIntChars+nDecChars+2] = '\0';
+
+  printf("my string: %s\n", str_full);
+
+  free(str_int);
+  free(str_dec);
+  free(str_full);
+}
+
 static InterpretResult run() {
 #define READ_BYTE() (*vm.ip++)
 #define READ_CONSTANT() (vm.chunk->constants.values[READ_BYTE()])
@@ -105,8 +143,10 @@ static InterpretResult run() {
     // inspectChunk(vm.chunk);
     disassembleInstruction(vm.chunk, (int)(vm.ip - vm.chunk->code));
 #endif
+
     uint8_t instruction;
     switch (instruction = READ_BYTE()) {
+
       case OP_CONSTANT: {
         Value constant = READ_CONSTANT();
         push(constant);
@@ -202,6 +242,17 @@ static InterpretResult run() {
           double b = AS_NUMBER(pop());
           double a = AS_NUMBER(pop());
           push(NUMBER_VAL(a + b));
+        } else if (IS_NUMBER(peek(0)) && IS_STRING(peek(1))) {
+          double a = AS_NUMBER(pop());
+          char* str[100];
+          snprintf(str, 100, "%f", a);
+          ObjString* string = copyString(str, strlen(str));
+          push(OBJ_VAL(string));
+          concatenate();
+        } else if (IS_STRING(peek(0)) && IS_NUMBER(peek(1))) {
+          Value a = pop();
+          Value b = pop();
+          convertNumberToString(AS_NUMBER(a));
         } else {
           runtimeError("Operands must be two numbers or two strings.");
           return INTERPRET_RUNTIME_ERROR;
@@ -222,8 +273,8 @@ static InterpretResult run() {
           runtimeError("Operand must be a number.");
           return INTERPRET_RUNTIME_ERROR;
         }
-        push(NUMBER_VAL(-AS_NUMBER(pop())));
-        // *(vm.stackTop-1) = NUMBER_VAL(-AS_NUMBER(*(vm.stackTop-1)));
+        // push(NUMBER_VAL(-AS_NUMBER(pop())));
+        *(vm.stackTop-1) = NUMBER_VAL(-AS_NUMBER(*(vm.stackTop-1)));
         break;
 
       case OP_PRINT: {
