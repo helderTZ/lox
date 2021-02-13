@@ -11,7 +11,7 @@ static int byteInstruction(const char* name, Chunk* chunk, int offset);
 static int jumpInstruction(const char* name, int sign, Chunk* chunk, int offset);
 
 void inspectTable(Table* table) {
-  printf("  count: %d, capacity: %d\n", table->count, table->capacity);
+  printf("count: %d, capacity: %d\n", table->count, table->capacity);
   for (int i = 0; i < table->capacity; ++i) {
     Entry* e = &table->entries[i];
     if (e->key != NULL) {
@@ -33,10 +33,8 @@ void inspectStack(VM* vm) {
 }
 
 void inspectVm(VM* vm) {
-  printf("Table strings:\n");
-  inspectTable(&vm->strings);
-  printf("Table globals:\n");
-  inspectTable(&vm->globals);
+  printf("Table strings: "); inspectTable(&vm->strings);
+  printf("Table globals: "); inspectTable(&vm->globals);
 }
 
 void inspectChunk(Chunk* chunk) {

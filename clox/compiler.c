@@ -63,7 +63,6 @@ typedef struct Compiler {
 // GLobals
 Parser parser;
 Compiler* current = NULL;
-Table stringConstants;
 int innermostLoopStart = -1;
 int innermostLoopScopeDepth = 0;
 int innermostBreakOffset = 0;
@@ -460,17 +459,8 @@ static void parsePrecedence(Precedence precedence) {
 }
 
 static uint8_t identifierConstant(Token* name) {
-  // See if we already have it.
-  ObjString* string = copyString(name->start, name->length);
-  Value indexValue;
-  if (tableGet(&stringConstants, string, &indexValue)) {
-    // We do.
-    return (uint8_t)AS_NUMBER(indexValue);
-  }
-
-  uint8_t index = makeConstant(OBJ_VAL(string));
-  tableSet(&stringConstants, string, NUMBER_VAL((double)index));
-  return index;
+  return makeConstant(OBJ_VAL(copyString(name->start,
+                                         name->length)));
 }
 
 static bool identifiersEqual(Token* a, Token* b) {
@@ -941,7 +931,6 @@ ObjFunction* compile(const char* source) {
 
   parser.hadError = false;
   parser.panicMode = false;
-  initTable(&stringConstants);
 
   advance();
 
@@ -950,6 +939,5 @@ ObjFunction* compile(const char* source) {
   }
 
   ObjFunction* function = endCompiler();
-  freeTable(&stringConstants);
   return parser.hadError ? NULL : function;
 }

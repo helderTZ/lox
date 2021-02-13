@@ -151,7 +151,7 @@ static InterpretResult run() {
   for (;;) {
 #ifdef DEBUG_VM_TABLES
     // inspectVm(&vm);
-    // inspectTable(&vm.globals);
+    printf("Table globals: "); inspectTable(&vm.globals);
 #endif
 #ifdef DEBUG_TRACE_EXECUTION
     inspectStack(&vm);
