@@ -44,6 +44,7 @@ typedef struct {
 typedef struct {
   Token name;
   int depth;
+  bool isCaptured;
 } Local;
 
 typedef struct {
@@ -216,6 +217,7 @@ static void initCompiler(Compiler* compiler, FunctionType type) {
 
   Local* local = &current->locals[current->localCount++];
   local->depth = 0;
+  local->isCaptured = false;
   local->name.start = "";
   local->name.length = 0;
 }
@@ -245,15 +247,32 @@ static void endScope() {
   current->scopeDepth--;
 
   int localsToPop = current->localCount;
+  bool capturedLocals = false;
   while (current->localCount > 0 &&
          current->locals[current->localCount - 1].depth > current->scopeDepth) {
     current->localCount--;
+    capturedLocals = current->locals[current->localCount - 1].isCaptured;
   }
   localsToPop -= current->localCount;
-  if (localsToPop > 1)
+
+  if (localsToPop > 1 && !capturedLocals) {
+    // if no locals are captured and are more than one pop all at once
     emitBytes(OP_POPN, (uint8_t)localsToPop);
-  else if(localsToPop == 1)
+  } else if(localsToPop == 1 && !capturedLocals) {
+    // if only one local not captured, pop it
     emitByte(OP_POP);
+  } else {
+    // we have interweaving captured and not captured locals
+    // iterate again and pop/close each one
+    while (current->localCount > 0 &&
+           current->locals[current->localCount - 1].depth > current->scopeDepth) {
+      if (current->locals[current->localCount - 1].isCaptured) {
+        emitByte(OP_CLOSE_UPVALUE);
+      } else {
+        emitByte(OP_POP);
+      }
+    }
+  }
 }
 
 // forward declarations
@@ -498,6 +517,7 @@ static int resolveUpvalue(Compiler* compiler, Token* name) {
 
   int local = resolveLocal(compiler->enclosing, name);
   if (local != -1) {
+    compiler->enclosing->locals[local].isCaptured = true;
     return addUpvalue(compiler, (uint8_t)local, true);
   }
 
@@ -517,6 +537,7 @@ static void addLocal(Token name) {
   Local* local = &current->locals[current->localCount++];
   local->name = name;
   local->depth = -1;
+  local->isCaptured = false;
 }
 
 static int addUpvalue(Compiler* compiler, uint8_t index, bool isLocal) {

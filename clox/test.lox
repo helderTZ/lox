@@ -1,8 +1,17 @@
-fun outer() {
-  var x = "outside";
-  fun inner() {
-    print x;
+{
+  var a = 1;
+  fun f() {
+    print a;
   }
-  inner();
+  var b = 2;
+  fun g() {
+    print b;
+  }
+  var c = 3;
+  fun h() {
+    print c;
+  }
+  f();
+  g();
+  h();
 }
-outer();
