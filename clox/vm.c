@@ -148,6 +148,26 @@ static void concatenate() {
   push(OBJ_VAL(result));
 }
 
+static void convertNumStr(double number) {
+#define MAX_DIGITS_DOUBLE 24
+  char string[24];
+  snprintf(string, MAX_DIGITS_DOUBLE, "%g", number);
+
+  int length = strlen(string);
+  ObjString* result = makeString(length);
+  memcpy(result->chars, string, length);
+  result->chars[length] = '\0';
+
+  uint32_t hash = hashString(string, length);
+  ObjString* interned = tableFindString(&vm.strings, string, length, hash);
+  if (interned == NULL) {
+    tableSet(&vm.strings, result, NIL_VAL);
+  }
+
+  push(OBJ_VAL(result));
+#undef MAX_DIGITS_DOUBLE
+}
+
 static InterpretResult run() {
   CallFrame* frame = &vm.frames[vm.frameCount - 1];
   register uint8_t* ip = frame->ip;
@@ -278,6 +298,16 @@ static InterpretResult run() {
           double b = AS_NUMBER(pop());
           double a = AS_NUMBER(pop());
           push(NUMBER_VAL(a + b));
+        } else if (IS_STRING(peek(0)) && IS_NUMBER(peek(1))) {
+          Value str = pop();
+          double num = AS_NUMBER(pop());
+          push(str);
+          convertNumStr(num);
+          concatenate();
+        } else if (IS_NUMBER(peek(0)) && IS_STRING(peek(1))) {
+          double num = AS_NUMBER(pop());
+          convertNumStr(num);
+          concatenate();
         } else {
           frame->ip = ip;
           runtimeError("Operands must be two numbers or two strings.");
