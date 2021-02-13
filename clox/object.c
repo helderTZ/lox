@@ -11,6 +11,12 @@
 #define ALLOCATE_OBJ(type, objectType) \
     (type*)allocateObject(sizeof(type), objectType)
 
+static Obj* allocateObject(size_t size, ObjType type) {
+  Obj* object = (Obj*)reallocate(NULL, 0, size);
+  object->type = type;
+  return object;
+}
+
 ObjFunction* newFunction() {
   ObjFunction* function = ALLOCATE_OBJ(ObjFunction, OBJ_FUNCTION);
 
@@ -18,12 +24,6 @@ ObjFunction* newFunction() {
   function->name = NULL;
   initChunk(&function->chunk);
   return function;
-}
-
-static Obj* allocateObject(size_t size, ObjType type) {
-  Obj* object = (Obj*)reallocate(NULL, 0, size);
-  object->type = type;
-  return object;
 }
 
 // implements hash algorithm FNV-1a
@@ -62,6 +62,10 @@ ObjString* copyString(const char* chars, int length) {
 }
 
 static void printFunction(ObjFunction* function) {
+  if (function->name == NULL) {
+    printf("<script>");
+    return;
+  }
   printf("<fn %s>", function->name->chars);
 }
 
