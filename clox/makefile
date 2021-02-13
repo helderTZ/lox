@@ -5,6 +5,8 @@ OBJECTS=$(patsubst %.c, %.o, $(SOURCES))
 
 ifneq ($(DEBUG),)
 CFLAGS += -g -O0
+else
+CFLAGS += -O3
 endif
 
 all: clox
