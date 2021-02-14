@@ -110,7 +110,7 @@ void printObject(Value value) {
       printf("<native fn>");
       break;
     case OBJ_STRING:
-      printf("'%s'", AS_CSTRING(value));
+      printf("%s", AS_CSTRING(value));
       break;
     case OBJ_UPVALUE:
       printf("upvalue");

@@ -1,5 +1,7 @@
 import timeit
+# from memoization import cached
 
+# @cached
 def fib(n):
 	if (n < 2):
 		return n
