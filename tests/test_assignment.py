@@ -42,3 +42,9 @@ def test_undefined():
   result = assignment("undefined")
   assert result.stdout == ""
   assert result.stderr == "Undefined variable 'unknown'.\n[line 1] in script\n"
+
+# unimplemented
+# def test_to_this):
+#   result = assignment("to_this")
+#   assert result.stdout == ""
+#   assert result.stderr == ""
