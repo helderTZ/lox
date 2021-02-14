@@ -2,3 +2,8 @@
 jlox/build
 clox/*.o
 clox/clox
+benchmarks/fibonacci.out
+benchmarks/fibonacci/Fibonacci.class
+benchmarks/fibonacci/Fibonacci.jar
+tests/__pycache__/*
+tests/.pytest_cache
