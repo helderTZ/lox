@@ -20,7 +20,6 @@ static void resetStack() {
   vm.stackTop = vm.stack;
   vm.frameCount = 0;
   vm.openUpvalues = NULL;
-  vm.objects = NULL;
 }
 
 static void runtimeError(const char* format, ...) {
@@ -58,6 +57,14 @@ static void defineNative(const char* name, NativeFn function) {
 
 void initVM() {
   resetStack();
+  vm.objects = NULL;
+  vm.bytesAllocated = 0;
+  vm.nextGC = 1024 * 1024;
+
+  vm.grayCount = 0;
+  vm.grayCapacity = 0;
+  vm.grayStack = NULL;
+
   initTable(&vm.globals);
   initTable(&vm.strings);
 
@@ -166,11 +173,13 @@ static bool isFalsey(Value value) {
 }
 
 static void concatenate() {
-  ObjString* b = AS_STRING(pop());
-  ObjString* a = AS_STRING(pop());
+  ObjString* b = AS_STRING(peek(0));
+  ObjString* a = AS_STRING(peek(1));
 
   int length = a->length + b->length;
   ObjString* result = makeString(length);
+  pop();
+  pop();
   memcpy(result->chars, a->chars, a->length);
   memcpy(result->chars + a->length, b->chars, b->length);
   result->chars[length] = '\0';
@@ -194,13 +203,13 @@ static void convertNumStr(double number) {
   memcpy(result->chars, string, length);
   result->chars[length] = '\0';
 
+  push(OBJ_VAL(result));
+
   uint32_t hash = hashString(string, length);
   ObjString* interned = tableFindString(&vm.strings, string, length, hash);
   if (interned == NULL) {
     tableSet(&vm.strings, result, NIL_VAL);
   }
-
-  push(OBJ_VAL(result));
 #undef MAX_DIGITS_DOUBLE
 }
 
