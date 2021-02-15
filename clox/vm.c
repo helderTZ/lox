@@ -184,13 +184,13 @@ static void concatenate() {
   memcpy(result->chars + a->length, b->chars, b->length);
   result->chars[length] = '\0';
 
+  push(OBJ_VAL(result));
+
   uint32_t hash = hashString(result->chars, length);
   ObjString* interned = tableFindString(&vm.strings, result->chars, length, hash);
   if (interned == NULL) {
     tableSet(&vm.strings, result, NIL_VAL);
   }
-
-  push(OBJ_VAL(result));
 }
 
 static void convertNumStr(double number) {

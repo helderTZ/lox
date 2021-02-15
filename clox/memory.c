@@ -57,6 +57,13 @@ void markObject(Obj* object) {
 
 void markValue(Value value) {
   if (!IS_OBJ(value)) return;
+
+  // never mark native functions
+  // maybe not needed because they will live on the stack
+  if (IS_NATIVE(value)) return;
+  if (IS_CLOSURE(value) && AS_CLOSURE(value)->obj.type == OBJ_NATIVE)
+    return;
+
   markObject(AS_OBJ(value));
 }
 
