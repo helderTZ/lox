@@ -18,7 +18,7 @@ static Obj* allocateObject(size_t size, ObjType type) {
   object->isMarked = false;
 
 #ifdef DEBUG_LOG_GC
-  printf("%p allocate %ld for %d\n", (void*)object, size, type);
+  printf("%p allocate %ld for %s\n", (void*)object, size, objTypeString(type));
 #endif
 
   return object;

@@ -26,6 +26,19 @@ typedef enum {
   OBJ_UPVALUE
 } ObjType;
 
+#ifdef DEBUG_LOG_GC
+static inline const char* objTypeString(ObjType type) {
+  static const char* strings[] = {
+    "OBJ_CLOSURE",
+    "OBJ_FUNCTION",
+    "OBJ_NATIVE",
+    "OBJ_STRING",
+    "OBJ_UPVALUE"
+  };
+  return strings[(int)type];
+}
+#endif
+
 struct Obj {
   ObjType type;
   bool isMarked;

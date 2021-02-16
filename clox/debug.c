@@ -17,8 +17,15 @@ void inspectTable(Table* table) {
     Entry* e = &table->entries[i];
     if (e->key != NULL) {
       printf("  [ %04d : %.*s ==> ", i, e->key->length, e->key->chars);
-      printValue(e->value);
+      if (IS_STRING(e->value)) {
+        printf("'");
+        printValue(e->value);
+        printf("'");
+      } else printValue(e->value);
       printf(" ]\n");
+    }
+    else if (AS_BOOL(e->value)) { // tombstone
+      printf("  [ %04d : tombstone ]\n", i);
     }
   }
 }
