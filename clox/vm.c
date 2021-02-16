@@ -243,10 +243,12 @@ static InterpretResult run() {
     // inspectChunk(&frame->closure->function->chunk);
     disassembleInstruction(
         &frame->closure->function->chunk,
-        (int)(frame->ip - frame->closure->function->chunk.code));
+        (int)(ip - frame->closure->function->chunk.code));
 #endif
+
     uint8_t instruction;
     switch (instruction = READ_BYTE()) {
+
       case OP_CONSTANT: {
         Value constant = READ_CONSTANT();
         push(constant);
