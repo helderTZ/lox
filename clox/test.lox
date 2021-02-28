@@ -1,5 +1,7 @@
 fun bye() {
   return "adieu";
 }
+bye();
+print bye;
 var b = bye();
 print b;

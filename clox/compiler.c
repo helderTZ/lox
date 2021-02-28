@@ -135,6 +135,9 @@ static bool match(TokenType type) {
 }
 
 static void emitByte(uint8_t byte) {
+#ifdef DEBUG_OPCODE
+  printf("Emitting "); disassembleOpcode(byte); printf("\n");
+#endif
   writeChunk(currentChunk(), byte, parser.previous.line);
 }
 

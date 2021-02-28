@@ -13,6 +13,7 @@
 
 void* reallocate(void* pointer, size_t oldSize, size_t newSize) {
   vm.bytesAllocated += newSize - oldSize;
+  pointer = NULL;
 
   if (newSize > oldSize) {
 #ifdef DEBUG_STRESS_GC
@@ -106,7 +107,7 @@ static void blackenObject(Obj* object) {
 
 static void freeObject(Obj* object) {
 #ifdef DEBUG_LOG_GC
-  printf("%p free type %d\n", (void*)object, object->type);
+  printf("%p free type %s\n", (void*)object, objTypeString(object->type));
 #endif
 
   switch (object->type) {

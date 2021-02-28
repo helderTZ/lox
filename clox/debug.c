@@ -16,7 +16,7 @@ void inspectTable(Table* table) {
   for (int i = 0; i < table->capacity; ++i) {
     Entry* e = &table->entries[i];
     if (e->key != NULL) {
-      printf("  [ %04d : %.*s ==> ", i, e->key->length, e->key->chars);
+      printf("  [ %04d : %.*s (hash: %u) ==> ", i, e->key->length, e->key->chars, e->key->hash);
       if (IS_STRING(e->value)) {
         printf("'");
         printValue(e->value);
@@ -169,4 +169,43 @@ static int longConstantInstruction(const char* name, Chunk* chunk, int offset) {
   printValue(chunk->constants.values[index]);
   printf("\n");
   return offset + 4;
+}
+
+void disassembleOpcode(uint8_t opcode) {
+  switch (opcode) {
+    case OP_CONSTANT:      printf("OP_CONSTANT"); break;
+    case OP_CONSTANT_LONG: printf("OP_CONSTANT_LONG"); break;
+    case OP_NIL:           printf("OP_NIL"); break;
+    case OP_TRUE:          printf("OP_TRUE"); break;
+    case OP_FALSE:         printf("OP_FALSE"); break;
+    case OP_ZERO:          printf("OP_ZERO"); break;
+    case OP_ONE:           printf("OP_ONE"); break;
+    case OP_POP:           printf("OP_POP"); break;
+    case OP_POPN:          printf("OP_POPN"); break;
+    case OP_GET_LOCAL:     printf("OP_GET_LOCAL"); break;
+    case OP_SET_LOCAL:     printf("OP_SET_LOCAL"); break;
+    case OP_GET_GLOBAL:    printf("OP_GET_GLOBAL"); break;
+    case OP_DEFINE_GLOBAL: printf("OP_DEFINE_GLOBAL"); break;
+    case OP_SET_GLOBAL:    printf("OP_SET_GLOBAL"); break;
+    case OP_GET_UPVALUE:   printf("OP_GET_UPVALUE"); break;
+    case OP_SET_UPVALUE:   printf("OP_SET_UPVALUE"); break;
+    case OP_EQUAL:         printf("OP_EQUAL"); break;
+    case OP_NEQUAL:        printf("OP_NEQUAL"); break;
+    case OP_GREATER:       printf("OP_GREATER"); break;
+    case OP_LESS:          printf("OP_LESS"); break;
+    case OP_ADD:           printf("OP_ADD"); break;
+    case OP_SUBTRACT:      printf("OP_SUBTRACT"); break;
+    case OP_MULTIPLY:      printf("OP_MULTIPLY"); break;
+    case OP_DIVIDE:        printf("OP_DIVIDE"); break;
+    case OP_NOT:           printf("OP_NOT"); break;
+    case OP_NEGATE:        printf("OP_NEGATE"); break;
+    case OP_JUMP:          printf("OP_JUMP"); break;
+    case OP_JUMP_IF_FALSE: printf("OP_JUMP_IF_FALSE"); break;
+    case OP_LOOP:          printf("OP_LOOP"); break;
+    case OP_CALL:          printf("OP_CALL"); break;
+    case OP_CLOSURE:       printf("OP_CLOSE_UPVALUE"); break;
+    case OP_RETURN:        printf("OP_RETURN"); break;
+    case OP_PRINT:         printf("OP_PRINT"); break;
+    default:               printf("Unknown opcode %d", opcode);
+  }
 }
