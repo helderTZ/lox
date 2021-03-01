@@ -5,6 +5,7 @@ project(cpplox VERSION 1.0 LANGUAGES CXX)
 add_executable(cpplox
     src/main.cpp
     src/chunk.cpp
+    src/value.cpp
 )
 
 target_include_directories(cpplox PUBLIC include)
