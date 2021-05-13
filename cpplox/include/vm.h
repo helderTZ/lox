@@ -4,7 +4,9 @@
 #include "chunk.h"
 #include "stack.h"
 
-#include <stack>
+#include <memory>
+#include <vector>
+#include <iterator>
 
 enum InterpretResult : uint8_t {
     INTERPRET_OK,
@@ -15,12 +17,12 @@ enum InterpretResult : uint8_t {
 class VM {
 public:
 
-    InterpretResult interpret(Chunk* chunk);
+    InterpretResult interpret(const char* source);
     InterpretResult run();
 
     static constexpr int stackMax = 256;
-    Chunk* chunk;
-    uint8_t* ip;
+    std::shared_ptr<Chunk> chunk;
+    std::vector<uint8_t>::iterator ip;
     Stack<Value> stack;
 };
 

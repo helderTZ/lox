@@ -1,10 +1,18 @@
 #include "vm.h"
+#include "compiler.h"
 
 #include <cstdio>
+#include <memory>
 
-InterpretResult VM::interpret(Chunk* chunk) {
-    this->chunk = chunk;
-    this->ip = &chunk->code[0];
+InterpretResult VM::interpret(const char* source) {
+    chunk = std::make_shared<Chunk>();
+
+    auto err = Compiler::compile(source, chunk);
+    if(!err) {
+        return INTERPRET_COMPILE_ERROR;
+    }
+
+    ip = chunk->code.begin();
 
     return run();
 }

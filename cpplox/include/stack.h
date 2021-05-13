@@ -32,7 +32,7 @@ void Stack<T>::push(const T t) {
 template <typename T>
 T Stack<T>::pop() {
     stackTop--;
-    return *stackTop:
+    return *stackTop;
 }
 
 template <typename T>
