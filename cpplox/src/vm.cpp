@@ -13,7 +13,7 @@ InterpretResult VM::interpret(const char* source) {
         return InterpretResult::INTERPRET_COMPILE_ERROR;
     }
 
-    ip = chunk->code.begin();
+    ip = chunk->code.data();
 
     return run();
 }

@@ -22,7 +22,7 @@ public:
 
     static constexpr int stackMax = 256;
     std::shared_ptr<Chunk> chunk;
-    std::vector<uint8_t>::iterator ip;
+    uint8_t* ip;
     Stack<Value> stack;
 };
 

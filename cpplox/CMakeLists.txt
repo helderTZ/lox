@@ -17,4 +17,5 @@ target_compile_options(cpplox PUBLIC
     -W
     -Wall
     -Wextra
+    -fpermissive
 )
