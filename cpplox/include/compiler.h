@@ -4,6 +4,8 @@
 #include "chunk.h"
 #include "scanner.h"
 
+#include <memory>
+
 #define COLOR_BLACK   "\u001b[30m"
 #define COLOR_RED     "\u001b[31m"
 #define COLOR_GREEN   "\u001b[32m"
@@ -17,24 +19,26 @@
 class Compiler {
 public:
 
-    static void compile(const char* source, std::shared_ptr<Chunk> chunk);
+    bool compile(const char* source, std::shared_ptr<Chunk> chunk);
 
 private:
-
-    class Parser {
-        Token current;
-        Token previous;
-        bool hadError;
-        bool panicMode;
-    };
-
     void advance();
+    void consume(TokenType type, const char* message);
+    void emitByte(uint8_t byte);
+    void emitReturn();
+    Chunk* currentChunk();
+    void endCompiler();
+
     void errorAtCurrent(const char* message);
     void error(const char* message);
     void errorAt(Token *token, const char* message);
 
-    Parser parser;
-}
+    Token* current = nullptr;
+    Token* previous = nullptr;
+    bool hadError = false;
+    bool panicMode = false;
+    Chunk* compilingChunk;
+};
 
 
 

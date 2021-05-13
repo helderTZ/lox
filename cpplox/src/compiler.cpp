@@ -3,17 +3,18 @@
 
 #include <cstdio>
 
-void Compiler::compile(const char* source, std::shared_ptr<Chunk> chunk) {
+bool Compiler::compile(const char* source, std::shared_ptr<Chunk> chunk) {
     Scanner scanner(source);
 
-    parser.hadError = false;
-    parser.panicMode = false;
+    hadError = false;
+    panicMode = false;
 
     advance();
     expression();
     consume(TOKEN_EOF, "Expect end of expression.");
+    endCompiler();
 
-    return !parser.hadError;
+    return !hadError;
     
     // int line = -1;
     // for (;;) {
@@ -31,30 +32,55 @@ void Compiler::compile(const char* source, std::shared_ptr<Chunk> chunk) {
 }
 
 void Compiler::advance() {
-    parser.previous = parser.current;
+    previous = current;
 
     for(;;) {
-        parser.current = scanToken();
-        if (parser.current.type != TOKEN_ERROR)
+        current = scanToken();
+        if (current->type != TOKEN_ERROR)
             break;
 
-        errorAtCurrent(parser.current.start);
+        errorAtCurrent(current->start);
     }
 }
 
+void Compiler::consume(TokenType type, const char* message) {
+    if (current->type == type) {
+        advance();
+        return;
+    }
+
+    errorAtCurrent(message);
+}
+
+void Compiler::emitByte(uint8_t byte) {
+    currentChunk()->writeChunk(byte, previous->line);
+}
+
+Chunk* Compiler::currentChunk() {
+    return compilingChunk;
+}
+
+void Compiler::endCompiler() {
+    emitReturn();
+}
+
+void emitReturn() {
+    emitByte(OP_RETURN);
+}
+
 void Compiler::errorAtCurrent(const char* message) {
-    errorAt(&parser.current, message)
+    errorAt(current, message)
 }
 
 void Compiler::error(const char* message) {
-    errorAt(&parser.previous, message);
+    errorAt(previous, message);
 }
 
 void Compiler::errorAt(Token* token, const char* message) {
-    if(parser.panicMode)
+    if(panicMode)
         return;
 
-    parser.panicMode = true;
+    panicMode = true;
     fprintf(stderr, COLOR_RED "[line %d] Error", token->line);
 
     if (token->type == TOKEN_EOF) {
@@ -66,5 +92,5 @@ void Compiler::errorAt(Token* token, const char* message) {
     }
 
     fprintf(stderr, ": %s" COLOR_RESET "\n", message);
-    parser.hadError = true;
+    hadError = true;
 }

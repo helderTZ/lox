@@ -6,10 +6,11 @@
 
 InterpretResult VM::interpret(const char* source) {
     chunk = std::make_shared<Chunk>();
+    Compiler compiler;
 
-    auto err = Compiler::compile(source, chunk);
+    auto err = compiler.compile(source, chunk);
     if(!err) {
-        return INTERPRET_COMPILE_ERROR;
+        return InterpretResult::INTERPRET_COMPILE_ERROR;
     }
 
     ip = chunk->code.begin();
@@ -48,10 +49,12 @@ InterpretResult VM::run() {
             case OP_RETURN: {
                 printValue(stack.pop());
                 printf("\n");
-                return INTERPRET_OK;
+                return InterpretResult::INTERPRET_OK;
             }
         }
     }
+
+    return InterpretResult::INTERPRET_RUNTIME_ERROR;
 
 #undef READ_BYTE
 #undef READ_CONSTANT

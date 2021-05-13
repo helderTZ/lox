@@ -6,6 +6,9 @@ add_executable(cpplox
     src/main.cpp
     src/chunk.cpp
     src/value.cpp
+    src/compiler.cpp
+    src/scanner.cpp
+    src/vm.cpp
 )
 
 target_include_directories(cpplox PUBLIC include)
