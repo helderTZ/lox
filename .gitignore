@@ -2,6 +2,7 @@
 jlox/build
 clox/*.o
 clox/clox
+cpplox/build
 benchmarks/fibonacci.out
 benchmarks/fibonacci/Fibonacci.class
 benchmarks/fibonacci/Fibonacci.jar
