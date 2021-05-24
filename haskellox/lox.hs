@@ -1,0 +1,1 @@
+main = putStrLn "haskellox, Hask'A'Lot"
