@@ -12,5 +12,6 @@ void inspectVm(VM* vm);
 void inspectStack(VM* vm);
 void inspectTable(Table* table);
 void inspectChunk(Chunk* chunk);
+void disassembleOpcode(uint8_t opcode);
 
 #endif

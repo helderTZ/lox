@@ -4,6 +4,7 @@
 
 #include "common.h"
 #include "compiler.h"
+#include "memory.h"
 #include "scanner.h"
 
 #ifdef DEBUG_PRINT_CODE
@@ -134,6 +135,9 @@ static bool match(TokenType type) {
 }
 
 static void emitByte(uint8_t byte) {
+#ifdef DEBUG_OPCODE
+  printf("Emitting "); disassembleOpcode(byte); printf("\n");
+#endif
   writeChunk(currentChunk(), byte, parser.previous.line);
 }
 
@@ -1013,4 +1017,12 @@ ObjFunction* compile(const char* source) {
 
   ObjFunction* function = endCompiler();
   return parser.hadError ? NULL : function;
+}
+
+void markCompilerRoots() {
+  Compiler* compiler = current;
+  while (compiler != NULL) {
+    markObject((Obj*)compiler->function);
+    compiler = compiler->enclosing;
+  }
 }

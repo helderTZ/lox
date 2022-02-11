@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "memory.h"
 #include "object.h"
@@ -14,6 +15,15 @@
 static Obj* allocateObject(size_t size, ObjType type) {
   Obj* object = (Obj*)reallocate(NULL, 0, size);
   object->type = type;
+  object->isMarked = false;
+
+  object->next = vm.objects;
+  vm.objects = object;
+
+#ifdef DEBUG_LOG_GC
+  printf("%p allocate %ld for %s\n", (void*)object, size, objTypeString(type));
+#endif
+
   return object;
 }
 
@@ -72,13 +82,18 @@ ObjString* copyString(const char* chars, int length) {
   ObjString* interned = tableFindString(&vm.strings, chars, length, hash);
   if (interned != NULL) return interned;
 
+  // this is so GC does not claim 'chars'
+  char * str = (char*) malloc(length);
+  memcpy(str, chars, length);
+
   ObjString* string = makeString(length);
-  memcpy(string->chars, chars, length);
+  memcpy(string->chars, str, length);
   string->chars[length] = '\0';
   string->hash = hash;
 
   tableSet(&vm.strings, string, NIL_VAL);
 
+  free(str);
   return string;
 }
 
